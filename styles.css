@@ -870,6 +870,11 @@ html.has-cursor, html.has-cursor * { cursor: none !important; }
 .form-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 22px; }
 .form-submit { border: 0; cursor: pointer; font-family: var(--ar); }
 .form-note { font-size: 13px; color: var(--muted); }
+.form-error { flex-basis: 100%; font-size: 14px; color: #ff8080; }
+.form-error:empty { display: none; }
+:root[data-theme="light"] .form-error { color: #c62828; }
+.form-submit[disabled] { opacity: .6; cursor: progress; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
 /* after sending */
 .form-done {

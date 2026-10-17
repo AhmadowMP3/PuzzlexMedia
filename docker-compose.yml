@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    image: puzzlex-media:latest
+    container_name: puzzlex-media
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      # behind nginx/Caddy on the same VPS, keep it local: "127.0.0.1:8080:8080"
+      - "8080:8080"
+    volumes:
+      - puzzlex-data:/data
+
+volumes:
+  puzzlex-data:

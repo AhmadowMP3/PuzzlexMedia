@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>About — PuzzleX Media</title>
-  <meta name="description" content="PuzzleX, your ready-made creative department: a strategic partner who understands the Gulf market and turns your goals into creative solutions.">
+  <title>Project — PuzzleX Media</title>
+  <meta name="description" content="A project from the PuzzleX portfolio.">
   <script>
     // apply the saved theme before first paint (no flash)
     try { if (localStorage.getItem('puzzlex-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
@@ -13,16 +13,16 @@
   </script>
   <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
-  <link rel="alternate" hreflang="ar" href="https://www.puzzlexmedia.com/about.html">
-  <link rel="alternate" hreflang="en" href="https://www.puzzlexmedia.com/en/about.html">
+  <link rel="alternate" hreflang="ar" href="https://www.puzzlexmedia.com/project.html">
+  <link rel="alternate" hreflang="en" href="https://www.puzzlexmedia.com/en/project.html">
   <meta name="theme-color" content="#0a0a0b">
   <!-- share preview (WhatsApp, LinkedIn, X…): crawlers need absolute URLs, so these point at the live domain -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="PuzzleX Media">
   <meta property="og:locale" content="en_US">
-  <meta property="og:title" content="About — PuzzleX Media">
-  <meta property="og:description" content="PuzzleX, your ready-made creative department: a strategic partner who understands the Gulf market and turns your goals into creative solutions.">
-  <meta property="og:url" content="https://www.puzzlexmedia.com/en/about.html">
+  <meta property="og:title" content="Project — PuzzleX Media">
+  <meta property="og:description" content="A project from the PuzzleX portfolio.">
+  <meta property="og:url" content="https://www.puzzlexmedia.com/en/project.html">
   <meta property="og:image" content="https://www.puzzlexmedia.com/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=53">
+  <link rel="stylesheet" href="../styles.css?v=54">
 </head>
 <body class="page">
   <div class="loader" role="status" aria-live="polite" aria-label="Loading">
@@ -45,7 +45,7 @@
       <p class="loader-count"><span class="loader-num">0</span>%</p>
     </div>
   </div>
-  <script src="../loader.js?v=53"></script>
+  <script src="../loader.js?v=54"></script>
 
 
   <header class="topbar topbar--page">
@@ -54,12 +54,12 @@
       <span class="brand-name">PUZZLEX<span>MEDIA</span></span>
     </a>
     <nav class="nav" aria-label="Menu">
-      <a href="about.html" aria-current="page">About</a>
+      <a href="about.html">About</a>
       <a href="services.html">Services</a>
-      <a href="work.html">Work</a>
+      <a href="work.html" aria-current="page">Work</a>
     </nav>
     <div class="top-actions">
-          <a class="lang-switch" href="../about.html" hreflang="ar" lang="ar" aria-label="العربية">ع</a>
+          <a class="lang-switch" href="../project.html" hreflang="ar" lang="ar" aria-label="العربية">ع</a>
       <button class="sound theme-toggle" type="button" aria-pressed="false" aria-label="Light mode">
         <svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
         <svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
@@ -68,76 +68,32 @@
     </div>
   </header>
 
-  <main>
-    <!-- ===== Opening: the ready-made creative department ===== -->
-    <section class="page-hero about-hero">
-      <div class="page-hero-copy">
-        <p class="kicker">ABOUT US</p>
-        <h1 class="page-title">Your ready-made<br><span class="hl">creative department.</span></h1>
-        <p class="lead"><b>PUZZLEX</b> is your ready-made creative department. We work as a strategic partner that helps you reach your goals in the Gulf market, through a deep understanding of the market, careful analysis of what your audience needs, and creative work that keeps up with your ambitions.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="contact.html">Start your project</a>
-          <a class="btn btn-ghost" href="services.html">Explore our services <span aria-hidden="true">→</span></a>
+  <main class="project">
+    <!-- filled in from projects.js by pages.js (project.html?id=…) -->
+    <section class="project-hero">
+      <a class="back-link" href="work.html"><span aria-hidden="true">←</span> All work</a>
+      <div class="project-head">
+        <div class="project-logo"></div>
+        <div class="project-head-text">
+          <p class="kicker project-client"></p>
+          <h1 class="page-title project-title"></h1>
         </div>
       </div>
-      <div class="tray-scene" aria-hidden="true">
-        <div class="tray"></div>
-      </div>
+      <p class="lead project-summary"></p>
+      <dl class="project-facts">
+        <div><dt>Sector</dt><dd class="project-sector"></dd></div>
+        <div><dt>Pieces we delivered</dt><dd class="project-services"></dd></div>
+        <div class="project-year-row"><dt>Year</dt><dd class="project-year"></dd></div>
+      </dl>
     </section>
+    <section class="project-gallery" aria-label="Project gallery"></section>
+    <p class="work-note">The images shown are placeholders and will be replaced with the original project files.</p>
+    <nav class="project-nav" aria-label="More projects"></nav>
 
-    <!-- ===== Why us: four pieces that lock into one square ===== -->
-    <section class="reasons" aria-labelledby="reasons-title">
-      <div class="reasons-stage">
-        <header class="reasons-head">
-          <p class="kicker">WHY PUZZLEX</p>
-          <h2 class="section-title" id="reasons-title">Why us?</h2>
-          <p class="reasons-sub">Four pieces, each one a reason… together they complete the picture.</p>
-        </header>
-        <div class="reasons-board">
-          <article class="reason" data-i="0">
-            <span class="reason-num">01</span>
-            <h3>A ready-made creative team</h3>
-            <p>Skip the hiring and training: we work as a complete creative department, ready to serve you and deliver your projects and plans from day one.</p>
-          </article>
-          <article class="reason" data-i="1">
-            <span class="reason-num">02</span>
-            <h3>We know the local market</h3>
-            <p>We understand the taste of Gulf audiences, especially in Saudi Arabia, and turn that into campaigns that land and travel far.</p>
-          </article>
-          <article class="reason" data-i="2">
-            <span class="reason-num">03</span>
-            <h3>Speed and depth</h3>
-            <p>Our work combines fast delivery with deep creative thinking, so you get quick, well-considered results without compromising the idea.</p>
-          </article>
-          <article class="reason" data-i="3">
-            <span class="reason-num">04</span>
-            <h3>A consistent identity</h3>
-            <p>We keep your brand consistent across every touchpoint, so it looks whole and connected on every platform.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Vision 2030 ===== -->
-    <section class="vision" aria-labelledby="vision-title">
-      <div class="vision-stage">
-        <span class="vision-year" aria-hidden="true">2030</span>
-        <svg class="vision-star s1" viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0-50C9-20 20-9 50 0C20 9 9 20 0 50C-9 20-20 9-50 0C-20-9-9-20 0-50Z"/></svg>
-        <svg class="vision-star s2" viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0-50C9-20 20-9 50 0C20 9 9 20 0 50C-9 20-20 9-50 0C-20-9-9-20 0-50Z"/></svg>
-        <svg class="vision-star s3" viewBox="-50 -50 100 100" aria-hidden="true"><path d="M0-50C9-20 20-9 50 0C20 9 9 20 0 50C-9 20-20 9-50 0C-20-9-9-20 0-50Z"/></svg>
-        <div class="vision-copy">
-          <p class="kicker">OUR VISION</p>
-          <h2 class="section-title" id="vision-title">Our vision</h2>
-          <p class="vision-text">By 2030, to be one of the leading creative agencies in the Gulf and Syria, and a model for long-term partnerships with companies looking to grow across the Arab world.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Call to action ===== -->
     <section class="cta-band">
       <div class="cta-band-inner">
-        <h2>Ready to complete your puzzle?</h2>
-        <p>Tell us about your project, and we’ll put every piece in its place.</p>
+        <h2>Shall we complete your puzzle too?</h2>
+        <p>Pick the pieces you need, or tell us what you have in mind.</p>
         <a class="btn btn-dark" href="contact.html">Start your project</a>
       </div>
     </section>
@@ -185,10 +141,11 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script src="../main.js?v=53"></script>
-  <script src="../sections.js?v=53"></script>
-  <script src="../cursor.js?v=53"></script>
-  <script src="../theme.js?v=53"></script>
-  <script src="../pages.js?v=53"></script>
+  <script src="../main.js?v=54"></script>
+  <script src="../sections.js?v=54"></script>
+  <script src="../cursor.js?v=54"></script>
+  <script src="../theme.js?v=54"></script>
+  <script src="../projects.js?v=54"></script>
+  <script src="../pages.js?v=54"></script>
 </body>
 </html>

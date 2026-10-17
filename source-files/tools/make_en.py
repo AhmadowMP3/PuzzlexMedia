@@ -1,6 +1,6 @@
 """Builds concept/en/*.html from the Arabic pages: same markup, English text, LTR, paths one folder up.
 Also adds the language switch, hreflang alternates and the iPhone icon to the Arabic pages (idempotent).
-Usage: python -I make_en.py <concept dir>"""
+Usage (from the project root): python -I source-files/tools/make_en.py ."""
 import re, sys, os
 
 ROOT = sys.argv[1]
@@ -118,7 +118,9 @@ EN = {
 'أرسل القطعة': 'Send your piece', 'نموذج تجريبي: لا يُرسل أي بيانات حتى يُربط بالخادم.': 'Demo form: nothing is sent until it’s connected to a server.',
 'وصلت قطعتك!': 'Your piece arrived!', 'شكرًا': 'Thank you',
 '— هذه نسخة تجريبية من النموذج، فلم تُرسل بياناتك بعد. عند ربطه بالخادم ستصلنا رسالتك مباشرة.': '— this is a demo version of the form, so your details haven’t been sent yet. Once it’s connected, your message will reach us directly.',
-'أرسل رسالة أخرى': 'Send another message', 'تواصل مباشر': 'Direct contact', 'تفضّل بمراسلتنا عبر القناة التي تناسبك.': 'Reach us on whichever channel suits you.',
+'أرسل رسالة أخرى': 'Send another message',
+'نستخدم بياناتك فقط للرد على طلبك.': 'We only use your details to reply to your request.',
+'— وصلتنا رسالتك، وسنعود إليك قريبًا على بريدك الإلكتروني.': '— we’ve received your message and will get back to you by email soon.', 'تواصل مباشر': 'Direct contact', 'تفضّل بمراسلتنا عبر القناة التي تناسبك.': 'Reach us on whichever channel suits you.',
 'الهاتف': 'Phone', 'يُضاف لاحقًا': 'coming soon', 'نعمل في': 'Where we work', 'الخليج · سوريا': 'Gulf · Syria',
 'رقم واتساب يُضاف لاحقًا': 'WhatsApp number coming soon', 'واتساب': 'WhatsApp',
 # 404

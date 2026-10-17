@@ -635,8 +635,14 @@ function initContact() {
     });
   };
 
-  form.addEventListener('submit', (ev) => {
+  const submitBtn = form.querySelector('.form-submit');
+  const formError = form.querySelector('.form-error');
+  let sending = false;
+
+  form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
+    if (sending) return;
+    formError.textContent = '';
     let firstBad = null;
     Object.values(fields).forEach((f) => {
       f.touched = true;
@@ -651,13 +657,39 @@ function initContact() {
       if (!REDUCED) gsap.fromTo(form.querySelector('.form-submit'), { x: 0 }, { x: 8, duration: 0.07, repeat: 5, yoyo: true, ease: 'sine.inOut', clearProps: 'x' });
       return;
     }
-    // Concept only: nothing leaves the browser. Wire this to the real endpoint later.
-    done.querySelector('.done-name').textContent = fields.name.el.value.trim().split(/\s+/)[0];
-    celebrate();
+    // send it to the site's own server (server.js → POST /api/contact)
+    sending = true;
+    submitBtn.disabled = true;
+    submitBtn.setAttribute('aria-busy', 'true');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fields.name.el.value, company: form.querySelector('#f-company').value, email: fields.email.el.value,
+          phone: fields.phone.el.value, message: fields.message.el.value, services: [...picked],
+          website: form.querySelector('[name="website"]').value, lang: EN ? 'en' : 'ar',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.error || String(res.status));
+      done.querySelector('.done-name').textContent = fields.name.el.value.trim().split(/\s+/)[0];
+      try { sessionStorage.removeItem(KEY); } catch (e) { /* nothing to forget */ }
+      celebrate();
+    } catch (err) {
+      formError.textContent = err.message === 'rate'
+        ? T('أرسلت عدة رسائل خلال وقت قصير. حاول مرة أخرى بعد بضع دقائق.', 'You’ve sent several messages in a short time. Please try again in a few minutes.')
+        : T('تعذّر إرسال رسالتك الآن. حاول مرة أخرى بعد قليل.', 'We couldn’t send your message just now. Please try again shortly.');
+    } finally {
+      sending = false;
+      submitBtn.disabled = false;
+      submitBtn.removeAttribute('aria-busy');
+    }
   });
 
   done.querySelector('.done-again').addEventListener('click', () => {
     form.reset();
+    formError.textContent = '';
     Object.values(fields).forEach((f) => { f.touched = false; show(f, ''); });
     done.hidden = true;
     body.forEach((el) => { el.hidden = false; });
