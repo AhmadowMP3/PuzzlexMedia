@@ -1,0 +1,11 @@
+# client's raw files: kept locally, not in the repo
+/PUZZELX.pdf
+/Assets/
+/source-files/partners-png/
+
+# local tooling
+.claude/
+__pycache__/
+Thumbs.db
+desktop.ini
+.DS_Store

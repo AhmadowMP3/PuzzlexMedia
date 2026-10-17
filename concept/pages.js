@@ -1,0 +1,737 @@
+/* PuzzleX — inner pages (about / services / work / contact) and the chrome shared by every page.
+   Uses gsap + ScrollTrigger, helpers from main.js (piecePath, TAB_DEPTH, REDUCED, playClick, $)
+   and from sections.js (loadPopMark / popMark). Every block checks its own markup first, so this file
+   can be loaded on any page. */
+
+/* ---------- shared chrome ---------- */
+(function initChrome() {
+  const bar = document.querySelector('.topbar--page');
+  if (bar) {
+    const onScroll = () => bar.classList.toggle('is-scrolled', window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+  // the loading screen hides the scrollbar; positions shift slightly once it's gone
+  document.addEventListener('loaderdone', () => ScrollTrigger.refresh());
+  // switching language keeps the same project / picked services
+  if (location.search) document.querySelectorAll('.lang-switch').forEach((l) => { l.search = location.search; });
+  // placeholder links (socials etc.) stay put until the real addresses arrive
+  document.addEventListener('click', (ev) => { if (ev.target.closest('a[href="#"]')) ev.preventDefault(); });
+  document.querySelectorAll('.site-footer .year').forEach((el) => { el.textContent = new Date().getFullYear(); });
+})();
+
+// a jigsaw outline as SVG path data: body `w` square at (ox, oy), tabs sized for a `tab`-sized piece
+function jigsawD(e, w, tab = w, ox = 0, oy = 0) {
+  let d = '';
+  const n = (v) => +v.toFixed(2);
+  const rec = {
+    moveTo: (x, y) => { d += `M${n(x)} ${n(y)}`; },
+    lineTo: (x, y) => { d += `L${n(x)} ${n(y)}`; },
+    bezierCurveTo: (a, b, c, dd, x, y) => { d += `C${n(a)} ${n(b)} ${n(c)} ${n(dd)} ${n(x)} ${n(y)}`; },
+    closePath: () => { d += 'Z'; },
+  };
+  piecePath(rec, ox, oy, w, w, e, tab);
+  return d;
+}
+
+/* ---------- About · the tray: a 2×2 puzzle tray seen in 3D, the lime X piece drops into its slot ---------- */
+async function initTray() {
+  const scene = document.querySelector('.tray-scene');
+  if (!scene) return;
+  const tray = scene.querySelector('.tray');
+  await loadPopMark();
+
+  const U = 100, PAD = 34;
+  const hE = [1, -1]; // edge between the two rows, per column
+  const vE = [-1, 1]; // edge between the two columns, per row
+  const edges = (c, r) => ({ t: r === 0 ? 0 : -hE[c], b: r === 1 ? 0 : hE[c], l: c === 0 ? 0 : -vE[r], r: c === 1 ? 0 : vE[r] });
+  const SLOT = { c: 1, r: 0 };
+  const vb = `${-PAD} ${-PAD} ${2 * U + 2 * PAD} ${2 * U + 2 * PAD}`;
+  const layer = (cls, inner, z) => `<svg class="${cls}" viewBox="${vb}" style="transform: translateZ(${z}px)">${inner}</svg>`;
+  const slab = (fill) => `<rect x="-22" y="-22" width="${2 * U + 44}" height="${2 * U + 44}" rx="22" style="fill:${fill}"/>`;
+
+  // tray slab with thickness (stacked copies), then the three placed pieces and the empty slot
+  let html = '';
+  for (let i = 7; i >= 1; i--) html += layer('tray-layer', slab('var(--tray-edge)'), -i * 2.6);
+  let face = slab('var(--tray)');
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 2; c++) {
+      const d = jigsawD(edges(c, r), U, U, c * U, r * U);
+      face += c === SLOT.c && r === SLOT.r
+        ? `<path d="${d}" style="fill:var(--tray-hole)"/>`
+        : `<path d="${d}" style="fill:var(--tray-piece);stroke:var(--tray-seam);stroke-width:.8"/>`;
+    }
+  }
+  const sd = jigsawD(edges(SLOT.c, SLOT.r), U, U, SLOT.c * U, SLOT.r * U);
+  html += layer('tray-face', face, 0);
+  html += layer('tray-shadow', `<path d="${sd}" style="fill:rgba(0,0,0,.55)"/>`, 0.5); // the lime piece's shadow on the tray
+
+  // the lime piece, with its own thickness
+  let piece = '';
+  for (let i = 6; i >= 1; i--) piece += layer('piece-layer', `<path d="${sd}" style="fill:#a3c400"/>`, -i * 2.2);
+  const mark = popMark
+    ? `<svg x="${SLOT.c * U + 27}" y="${SLOT.r * U + 22}" width="46" height="46" viewBox="${popMark.viewBox}">${popMark.inner}</svg>`
+    : '';
+  piece += layer('piece-face', `<path d="${sd}" style="fill:#d7ff00"/>${mark}`, 0);
+  tray.innerHTML = `${html}<div class="tray-piece">${piece}</div>`;
+
+  const lime = tray.querySelector('.tray-piece');
+  const shadow = tray.querySelector('.tray-shadow');
+  if (REDUCED) { gsap.set(lime, { z: 1.5 }); return; }
+
+  // it falls into its slot once on arrival, then lifts when you point at the tray
+  const REST = 1.5; // resting just above the tray face (coplanar faces would let the tray draw over it)
+  gsap.set(lime, { z: 240, rotationZ: -38, x: 30, y: -30, autoAlpha: 0 });
+  gsap.set(shadow, { opacity: 0.05, scale: 1.25, svgOrigin: `${SLOT.c * U + 50} ${SLOT.r * U + 50}` });
+  const drop = gsap.timeline({ delay: 0.35 });
+  drop.to(lime, { autoAlpha: 1, duration: 0.25, ease: 'none' }, 0);
+  drop.to(lime, { z: REST, rotationZ: 0, x: 0, y: 0, duration: 1.05, ease: 'power3.in' }, 0);
+  drop.to(shadow, { opacity: 1, scale: 1, duration: 1.05, ease: 'power3.in' }, 0);
+  drop.add(() => playClick());
+  drop.to(tray, { y: 5, duration: 0.08, yoyo: true, repeat: 1, ease: 'power1.out' }); // the tray gives a little
+
+  scene.addEventListener('pointerenter', () => {
+    if (drop.isActive()) return;
+    gsap.to(lime, { z: 70, rotationZ: -8, duration: 0.6, ease: 'power3.out', overwrite: 'auto' });
+    gsap.to(shadow, { opacity: 0.35, scale: 1.12, duration: 0.6, ease: 'power3.out', overwrite: 'auto' });
+  });
+  scene.addEventListener('pointerleave', () => {
+    if (drop.isActive()) return;
+    gsap.to(lime, { z: REST, rotationZ: 0, duration: 0.45, ease: 'power3.in', overwrite: 'auto', onComplete: playClick });
+    gsap.to(shadow, { opacity: 1, scale: 1, duration: 0.45, ease: 'power3.in', overwrite: 'auto' });
+  });
+}
+
+/* ---------- About · why us: four pieces that lock into one square as you scroll ---------- */
+function initReasons() {
+  const sec = document.querySelector('.reasons');
+  if (!sec) return;
+  const board = sec.querySelector('.reasons-board');
+  const items = [...board.querySelectorAll('.reason')];
+  let ctx = null;
+
+  const build = () => {
+    if (ctx) ctx.revert();
+    board.classList.remove('locked');
+    const mobile = window.innerWidth < 760;
+    const S = mobile
+      ? Math.min(window.innerWidth * 0.84, 360)
+      : Math.min(window.innerWidth * 0.27, window.innerHeight * 0.37, 380);
+    const tab = S * 0.55; // smaller tabs than the piece itself: more room for text
+    const cut = tab * TAB_DEPTH; // how deep a cut-in reaches
+    const pad = Math.ceil(cut + 8);
+    const cols = mobile ? 1 : 2, rows = mobile ? 4 : 2;
+
+    // reading order 01 → 04 runs top-to-bottom, right-to-left in Arabic and left-to-right in English
+    const cell = (i) => (mobile ? { c: 0, r: i } : { c: (i % 2 === 0) !== EN ? 1 : 0, r: Math.floor(i / 2) });
+    // every piece gets exactly one tab and one cut-in on its inner edges
+    const hE = mobile ? [[1], [1], [1]] : [[-1, 1]]; // [row gap][column] — on phones: cut-in on top, tab below
+    const vE = mobile ? [] : [[1], [-1]]; // [row][column gap]
+    const edgesAt = (c, r) => ({
+      t: r === 0 ? 0 : -hE[r - 1][c],
+      b: r === rows - 1 ? 0 : hE[r][c],
+      l: c === 0 ? 0 : -vE[r][c - 1],
+      r: c === cols - 1 ? 0 : vE[r][c],
+    });
+
+    board.style.width = cols * S + 'px';
+    board.style.height = rows * S + 'px';
+    items.forEach((it, i) => {
+      const { c, r } = cell(i);
+      const e = edgesAt(c, r);
+      const side = S + pad * 2;
+      Object.assign(it.style, { left: c * S - pad + 'px', top: r * S - pad + 'px', width: side + 'px', height: side + 'px' });
+      // keep the text inside the part no cut-in reaches
+      const inset = (edge) => pad + (edge < 0 ? cut + S * 0.06 : S * 0.1);
+      it.style.padding = `${inset(e.t)}px ${inset(e.r)}px ${inset(e.b)}px ${inset(e.l)}px`;
+      it.querySelector('.reason-shape')?.remove();
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'reason-shape');
+      svg.setAttribute('viewBox', `${-pad} ${-pad} ${side} ${side}`);
+      svg.setAttribute('aria-hidden', 'true');
+      svg.innerHTML = `<path d="${jigsawD(e, S, tab)}"/>`;
+      it.prepend(svg);
+    });
+
+    if (REDUCED) { board.classList.add('locked'); return; }
+
+    ctx = gsap.context(() => {
+      const spread = (i) => {
+        const { c, r } = cell(i);
+        const sx = mobile ? (i % 2 ? -1 : 1) : (c === 1 ? 1 : -1);
+        const sy = mobile ? 0 : (r === 0 ? -1 : 1);
+        return { x: sx * S * (mobile ? 0.35 : 0.42), y: sy * S * 0.3, rotation: (i % 2 ? -1 : 1) * (7 + i * 2), opacity: 0.35 };
+      };
+      if (mobile) {
+        // phones: each piece slides into the stack as it scrolls into view
+        items.forEach((it, i) => {
+          gsap.fromTo(it, spread(i), {
+            x: 0, y: 0, rotation: 0, opacity: 1, ease: 'power2.out',
+            scrollTrigger: { trigger: it, start: 'top 92%', end: 'top 55%', scrub: 0.8 },
+          });
+        });
+        ScrollTrigger.create({ trigger: board, start: 'bottom 70%', onEnter: () => { board.classList.add('locked'); playClick(); }, onLeaveBack: () => board.classList.remove('locked') });
+        return;
+      }
+      const LOCK = 1;
+      let last = 0;
+      const tl = gsap.timeline({
+        scrollTrigger: { trigger: sec, start: 'top top', end: 'bottom bottom', scrub: 0.9 },
+        onUpdate: () => {
+          const t = tl.time();
+          if (last < LOCK && t >= LOCK) playClick();
+          board.classList.toggle('locked', t >= LOCK);
+          last = t;
+        },
+      });
+      items.forEach((it, i) => tl.fromTo(it, spread(i), { x: 0, y: 0, rotation: 0, opacity: 1, duration: 0.8, ease: 'power2.inOut' }, 0.1 + i * 0.03));
+      tl.to({}, { duration: 0.6 }, LOCK);
+    });
+  };
+
+  build();
+  let lastW = window.innerWidth, timer;
+  window.addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
+      build();
+      ScrollTrigger.refresh();
+    }, 250);
+  });
+}
+
+/* ---------- About · vision: the sentence lights up word by word ---------- */
+function initVision() {
+  const sec = document.querySelector('.vision');
+  if (!sec) return;
+  const p = sec.querySelector('.vision-text');
+  const words = p.textContent.trim().split(/\s+/);
+  p.innerHTML = words.map((w) => `<span class="w">${w}</span>`).join(' ');
+  const spans = [...p.querySelectorAll('.w')];
+  if (REDUCED) { spans.forEach((s) => { s.style.opacity = 1; }); return; }
+  gsap.to(spans, {
+    opacity: 1,
+    stagger: 0.1,
+    ease: 'none',
+    scrollTrigger: { trigger: sec, start: 'top 20%', end: 'bottom bottom', scrub: 0.6 },
+  });
+  gsap.fromTo(sec.querySelector('.vision-year'), { yPercent: 12, scale: 0.92 }, {
+    yPercent: -12, scale: 1.04, ease: 'none',
+    scrollTrigger: { trigger: sec, start: 'top bottom', end: 'bottom top', scrub: true },
+  });
+}
+
+/* ---------- Services · the three big pieces in the opening (each links to its section) ---------- */
+function initServiceHero() {
+  const wrap = document.querySelector('.svc-hero-pieces');
+  if (!wrap) return;
+  const U = 100, TAB = 90, PAD = Math.ceil(TAB * TAB_DEPTH + 4);
+  const vE = [1, -1]; // edge between columns 0|1 and 1|2
+  wrap.style.setProperty('--pad', (PAD / U).toFixed(3));
+  [...wrap.querySelectorAll('.svc-hero-piece')].forEach((a, i) => {
+    const c = EN ? i : 2 - i; // follow the reading order
+    const e = { t: 0, b: 0, l: c === 0 ? 0 : -vE[c - 1], r: c === 2 ? 0 : vE[c] };
+    a.style.setProperty('--c', c);
+    a.insertAdjacentHTML('afterbegin',
+      `<svg class="svc-hero-shape" viewBox="${-PAD} ${-PAD} ${U + 2 * PAD} ${U + 2 * PAD}" aria-hidden="true"><path d="${jigsawD(e, U, TAB)}"/></svg>`);
+  });
+}
+
+/* ---------- Services · build your puzzle: picked services fly into a tray, then go to the contact page ---------- */
+function initServicePicker() {
+  const panel = document.querySelector('.my-puzzle');
+  if (!panel) return;
+  const KEY = 'puzzlex-services';
+  const buttons = [...document.querySelectorAll('.svc')];
+  const known = new Set(buttons.map((b) => b.dataset.id));
+  const piecesEl = panel.querySelector('.my-puzzle-pieces');
+  const countEl = panel.querySelector('.my-puzzle-count');
+  const unitEl = panel.querySelector('.my-puzzle-unit');
+  const send = panel.querySelector('.my-puzzle-send');
+  const MINI_PAD = Math.ceil(100 * TAB_DEPTH + 4);
+  const mini = `<svg class="mini-piece" viewBox="${-MINI_PAD} ${-MINI_PAD} ${100 + 2 * MINI_PAD} ${100 + 2 * MINI_PAD}"><path d="${jigsawD({ t: 0, b: 0, l: -1, r: 1 }, 100, 100)}"/></svg>`;
+
+  let picked = [];
+  try { picked = JSON.parse(sessionStorage.getItem(KEY) || '[]').filter((id) => known.has(id)); } catch (e) { picked = []; }
+  let open = false;
+
+  // Arabic counting: قطعة واحدة · قطعتان (the dual needs no numeral) · 3–10 قطع · 11+ قطعة
+  const unit = (n) => (EN ? (n === 1 ? 'piece' : 'pieces') : n === 1 ? 'قطعة واحدة' : n === 2 ? 'قطعتان' : n <= 10 ? 'قطع' : 'قطعة');
+
+  const render = () => {
+    buttons.forEach((b) => b.setAttribute('aria-pressed', String(picked.includes(b.dataset.id))));
+    const n = picked.length;
+    countEl.textContent = EN || n > 2 ? n : '';
+    unitEl.textContent = unit(n);
+    piecesEl.innerHTML = picked.slice(0, 6).map(() => mini).join('') + (n > 6 ? `<span class="more">+${n - 6}</span>` : '');
+    send.href = 'contact.html' + (n ? `?services=${encodeURIComponent(picked.join(','))}` : '');
+    try { sessionStorage.setItem(KEY, JSON.stringify(picked)); } catch (e) { /* the pick just won't survive a reload */ }
+  };
+
+  const setOpen = (on, animate) => {
+    if (on === open) return;
+    open = on;
+    if (on) panel.hidden = false;
+    if (!animate || REDUCED) { panel.hidden = !on; gsap.set(panel, { yPercent: 0, autoAlpha: on ? 1 : 0 }); return; }
+    gsap.fromTo(panel, on ? { yPercent: 160, autoAlpha: 0 } : { yPercent: 0, autoAlpha: 1 }, {
+      yPercent: on ? 0 : 160, autoAlpha: on ? 1 : 0, duration: 0.5, ease: on ? 'back.out(1.6)' : 'power2.in',
+      onComplete: () => { if (!on) panel.hidden = true; },
+    });
+  };
+
+  // a small lime piece flies from the card's + into the tray
+  const fly = (btn, slot) => {
+    if (REDUCED) return Promise.resolve();
+    const from = btn.querySelector('.svc-add').getBoundingClientRect();
+    const r = (slot || piecesEl).getBoundingClientRect();
+    // the tray may still be sliding up from below: aim for where it will rest, not where it is now
+    const rising = ((gsap.getProperty(panel, 'yPercent') || 0) * panel.offsetHeight) / 100;
+    const to = { left: r.left, top: r.top - rising, width: r.width, height: r.height };
+    const el = document.createElement('div');
+    el.className = 'fly-piece';
+    el.innerHTML = mini;
+    document.body.appendChild(el);
+    const sx = from.left + from.width / 2, sy = from.top + from.height / 2;
+    gsap.set(el, { left: sx, top: sy, xPercent: -50, yPercent: -50, scale: 1.5, rotation: -40 });
+    return new Promise((resolve) => {
+      const tl = gsap.timeline({ onComplete: () => { el.remove(); resolve(); } });
+      tl.to(el, { x: to.left + to.width / 2 - sx, duration: 0.75, ease: 'power1.inOut' }, 0);
+      tl.to(el, { y: to.top + to.height / 2 - sy, duration: 0.75, ease: 'back.in(1.2)' }, 0);
+      tl.to(el, { rotation: 320, scale: 0.7, duration: 0.75, ease: 'power2.inOut' }, 0);
+    });
+  };
+
+  buttons.forEach((btn) => btn.addEventListener('click', async () => {
+    const id = btn.dataset.id;
+    if (picked.includes(id)) {
+      picked = picked.filter((x) => x !== id);
+      render();
+      if (!picked.length) setOpen(false, true);
+      return;
+    }
+    picked.push(id);
+    const opening = !open;
+    render();
+    if (opening) setOpen(true, true);
+    // the new piece's slot in the tray stays empty until the flying piece lands in it
+    const slot = piecesEl.querySelectorAll('.mini-piece')[Math.min(picked.length, 6) - 1];
+    if (slot && !REDUCED) gsap.set(slot, { autoAlpha: 0 });
+    await fly(btn, slot);
+    if (slot && slot.isConnected) gsap.fromTo(slot, { autoAlpha: 1, scale: 1.4 }, { scale: 1, duration: 0.35, ease: 'back.out(2.5)' });
+    playClick();
+    if (!REDUCED) gsap.fromTo(panel, { scale: 1 }, { scale: 1.04, duration: 0.12, yoyo: true, repeat: 1, ease: 'power1.out' });
+  }));
+
+  panel.querySelector('.my-puzzle-clear').addEventListener('click', () => {
+    picked = [];
+    render();
+    setOpen(false, true);
+  });
+
+  render();
+  setOpen(picked.length > 0, false);
+}
+
+/* ---------- segmented control (LinkedIn: people / companies) ---------- */
+function initSegmented() {
+  document.querySelectorAll('.seg').forEach((seg) => {
+    const tabs = [...seg.querySelectorAll('[role="tab"]')];
+    const thumb = seg.querySelector('.seg-thumb');
+    const place = (tab) => {
+      thumb.style.width = tab.offsetWidth + 'px';
+      thumb.style.transform = `translateX(${tab.offsetLeft}px)`;
+    };
+    const select = (tab, focus) => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+      place(tab);
+      if (focus) tab.focus();
+      const panel = document.getElementById(tab.getAttribute('aria-controls'));
+      if (!REDUCED) gsap.fromTo(panel.querySelectorAll('.svc, .svc-feature'), { y: 22, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.06, ease: 'power3.out' });
+      ScrollTrigger.refresh();
+    };
+    tabs.forEach((t) => t.addEventListener('click', () => select(t)));
+    seg.addEventListener('keydown', (ev) => {
+      const i = tabs.indexOf(document.activeElement);
+      if (i < 0) return;
+      // right-to-left: ArrowLeft moves forward
+      const step = ev.key === 'ArrowLeft' ? 1 : ev.key === 'ArrowRight' ? -1 : 0;
+      if (!step) return;
+      ev.preventDefault();
+      select(tabs[(i + step + tabs.length) % tabs.length], true);
+    });
+    place(tabs.find((t) => t.getAttribute('aria-selected') === 'true') || tabs[0]);
+    window.addEventListener('resize', () => place(tabs.find((t) => t.getAttribute('aria-selected') === 'true')));
+  });
+}
+
+/* ---------- service cards slide in as they come into view ---------- */
+function initServiceReveal() {
+  const cards = document.querySelectorAll('.svc-group:not(#linkedin) .svc, #li-people .svc');
+  if (!cards.length || REDUCED) return;
+  gsap.set(cards, { y: 26, autoAlpha: 0 });
+  ScrollTrigger.batch(cards, {
+    start: 'top 92%',
+    onEnter: (batch) => gsap.to(batch, { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.07, ease: 'power3.out', overwrite: true }),
+  });
+}
+
+/* ---------- Work · placeholder covers ---------- */
+// A stand-in image for a project until its real files arrive: the client's colours, a faint jigsaw grid,
+// the client's logo on a tile, and a clear "placeholder" label.
+const hashStr = (s) => [...s].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
+
+function coverSVG(p, variant = 0, w = 400, h = 300) {
+  const R = rng(hashStr(p.id) + variant * 101);
+  const gid = `cv-${p.id}-${variant}-${w}x${h}`;
+  const size = [80, 100, 66, 120][variant % 4];
+  const cols = Math.ceil(w / size), rows = Math.ceil(h / size);
+  const hE = Array.from({ length: rows }, () => Array.from({ length: cols }, () => (R() > 0.5 ? 1 : -1)));
+  const vE = Array.from({ length: rows }, () => Array.from({ length: cols }, () => (R() > 0.5 ? 1 : -1)));
+  let grid = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const e = { t: r ? -hE[r - 1][c] : 0, b: r < rows - 1 ? hE[r][c] : 0, l: c ? -vE[r][c - 1] : 0, r: c < cols - 1 ? vE[r][c] : 0 };
+      grid += `<path d="${jigsawD(e, size, size, c * size, r * size)}"/>`;
+    }
+  }
+  // the logo tile sits somewhere different in each variant
+  const tile = Math.min(w, h) * (variant ? 0.3 : 0.36);
+  const spots = [[0.5, 0.48], [0.3, 0.42], [0.68, 0.55], [0.5, 0.4]];
+  const [fx, fy] = spots[variant % spots.length];
+  const tx = w * fx - tile / 2, ty = h * fy - tile / 2;
+  const angle = variant ? (R() * 2 - 1) * 8 : 0;
+  return `<svg class="cover" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${T('صورة مؤقتة', 'Placeholder image')} — ${p.client}">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${p.colors[0]}"/><stop offset="1" stop-color="${p.colors[1]}"/>
+    </linearGradient></defs>
+    <rect width="${w}" height="${h}" fill="url(#${gid})"/>
+    <g fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.2">${grid}</g>
+    <g transform="rotate(${angle.toFixed(1)} ${w * fx} ${h * fy})">
+      <rect x="${tx + 6}" y="${ty + 10}" width="${tile}" height="${tile}" rx="${tile * 0.18}" fill="rgba(0,0,0,.25)"/>
+      <rect x="${tx}" y="${ty}" width="${tile}" height="${tile}" rx="${tile * 0.18}" fill="#fff"/>
+      <image href="${ROOT}assets/partners/${p.logo}.webp" x="${tx + tile * 0.08}" y="${ty + tile * 0.08}" width="${tile * 0.84}" height="${tile * 0.84}" preserveAspectRatio="xMidYMid meet"/>
+    </g>
+    <g transform="translate(${w - 14} ${h - 14})">
+      <rect x="-86" y="-22" width="86" height="22" rx="11" fill="rgba(0,0,0,.35)"/>
+      <text x="-43" y="-7" text-anchor="middle" font-family="Alexandria" font-size="10.5" font-weight="600" fill="rgba(255,255,255,.85)">${T('صورة مؤقتة', 'Placeholder')}</text>
+    </g>
+  </svg>`;
+}
+
+const miniArrowPiece = () => {
+  const pad = Math.ceil(100 * TAB_DEPTH + 4);
+  return `<svg viewBox="${-pad} ${-pad} ${100 + 2 * pad} ${100 + 2 * pad}" aria-hidden="true">
+    <path d="${jigsawD({ t: 1, r: 0, b: -1, l: 1 }, 100, 100)}"/>
+    <path class="arrow" d="M64 50H34M48 34L32 50l16 16"/>
+  </svg>`;
+};
+
+/* ---------- Work · the grid, filtered by sector ---------- */
+function initWork() {
+  const grid = document.querySelector('.work-grid');
+  if (!grid || typeof PROJECTS === 'undefined') return;
+  grid.innerHTML = PROJECTS.map((p) => `
+    <li class="work-item" data-sector="${p.sector}">
+      <a class="work-card" href="project.html?id=${p.id}">
+        <div class="work-cover">${coverSVG(p, 0)}<span class="work-go">${miniArrowPiece()}</span></div>
+        <div class="work-meta">
+          <span class="work-client">${p.client}</span>
+          <h2 class="work-title">${p.title}</h2>
+          <ul class="work-tags">${p.services.map((s) => `<li>${s}</li>`).join('')}</ul>
+        </div>
+      </a>
+    </li>`).join('');
+
+  const items = [...grid.querySelectorAll('.work-item')];
+  const chips = [...document.querySelectorAll('.work-filters .chip')];
+  chips.forEach((chip) => {
+    const f = chip.dataset.filter;
+    chip.querySelector('.chip-count').textContent = f === 'all' ? PROJECTS.length : PROJECTS.filter((p) => p.sector === f).length;
+  });
+
+  // filtering: the grid dips out, the cards are swapped, and the ones that stay come back in turn
+  const apply = (filter, animate) => {
+    const show = (it) => filter === 'all' || it.dataset.sector === filter;
+    chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === filter)));
+    const swap = () => {
+      items.forEach((it) => it.classList.toggle('is-hidden', !show(it)));
+      ScrollTrigger.refresh();
+    };
+    if (!animate || REDUCED) { swap(); return; }
+    gsap.to(grid, {
+      autoAlpha: 0, y: 12, duration: 0.2, ease: 'power1.in', overwrite: true,
+      onComplete: () => {
+        swap();
+        const visible = items.filter(show);
+        gsap.set(grid, { autoAlpha: 1, y: 0 });
+        gsap.fromTo(visible, { y: 26, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.05, ease: 'power3.out', overwrite: true });
+      },
+    });
+  };
+  chips.forEach((chip) => chip.addEventListener('click', () => apply(chip.dataset.filter, true)));
+
+  if (!REDUCED) {
+    gsap.set(items, { y: 40, autoAlpha: 0 });
+    ScrollTrigger.batch(items, {
+      start: 'top 92%',
+      onEnter: (batch) => gsap.to(batch, { y: 0, autoAlpha: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out', overwrite: true }),
+    });
+  }
+}
+
+/* ---------- Work · one project page (project.html?id=…) ---------- */
+function initProject() {
+  const page = document.querySelector('.project');
+  if (!page || typeof PROJECTS === 'undefined') return;
+  const id = new URLSearchParams(location.search).get('id');
+  const i = PROJECTS.findIndex((p) => p.id === id);
+  if (i < 0) {
+    page.querySelector('.project-title').textContent = T('لم نجد هذا المشروع', 'Project not found');
+    page.querySelector('.project-summary').innerHTML = T('ربما تغيّر الرابط.', 'The link may have changed.') + ` <a href="work.html">${T('تصفّح كل الأعمال', 'Browse all work')}</a>.`;
+    page.querySelector('.project-facts').hidden = true;
+    page.querySelector('.project-gallery').hidden = true;
+    return;
+  }
+  const p = PROJECTS[i];
+  document.title = `${p.title} — ${p.client} | PuzzleX Media`;
+  const meta = document.querySelector('meta[name="description"]');
+  if (meta) meta.setAttribute('content', p.summary);
+
+  page.querySelector('.project-logo').innerHTML = `<img src="${ROOT}assets/partners/${p.logo}.webp" alt="${p.client}" width="96" height="96">`;
+  page.querySelector('.project-client').textContent = p.client;
+  page.querySelector('.project-title').textContent = p.title;
+  page.querySelector('.project-summary').textContent = p.summary;
+  page.querySelector('.project-sector').textContent = SECTORS[p.sector];
+  page.querySelector('.project-services').innerHTML = p.services.map((s) => `<a class="tag" href="services.html">${s}</a>`).join('');
+  if (p.year) page.querySelector('.project-year').textContent = p.year;
+  else page.querySelector('.project-year-row').remove();
+
+  // gallery: one wide frame, two side by side, one wide again
+  const frames = [[0, 800, 400, 'wide'], [1, 400, 300, ''], [2, 400, 300, ''], [3, 800, 340, 'wide']];
+  page.querySelector('.project-gallery').innerHTML = frames
+    .map(([v, w, h, cls]) => `<figure class="gallery-item ${cls}">${coverSVG(p, v, w, h)}</figure>`).join('');
+
+  const prev = PROJECTS[(i - 1 + PROJECTS.length) % PROJECTS.length];
+  const next = PROJECTS[(i + 1) % PROJECTS.length];
+  page.querySelector('.project-nav').innerHTML = `
+    <a class="project-nav-link prev" href="project.html?id=${prev.id}"><span class="dir">${T('→ المشروع السابق', '← Previous project')}</span><span class="name">${prev.title}</span><span class="who">${prev.client}</span></a>
+    <a class="project-nav-link next" href="project.html?id=${next.id}"><span class="dir">${T('المشروع التالي ←', 'Next project →')}</span><span class="name">${next.title}</span><span class="who">${next.client}</span></a>`;
+
+  if (!REDUCED) {
+    gsap.from(page.querySelectorAll('.project-head, .project-summary, .project-facts > div'), { y: 30, autoAlpha: 0, duration: 0.7, stagger: 0.08, ease: 'power3.out', delay: 0.1 });
+    const figs = page.querySelectorAll('.gallery-item');
+    gsap.set(figs, { y: 50, autoAlpha: 0 });
+    ScrollTrigger.batch(figs, { start: 'top 92%', onEnter: (b) => gsap.to(b, { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.1, ease: 'power3.out' }) });
+  }
+}
+
+/* ---------- Contact · the form, with the services picked on the services page already in place ---------- */
+const SERVICE_GROUPS = [
+  { title: T('الإبداعية', 'Creative'), items: [['identity', T('الهوية البصرية', 'Visual identity')], ['social-design', T('السوشال ميديا والإعلانات', 'Social media & ad design')], ['print', T('المطبوعات والإعلانات الطرقية', 'Print & outdoor ads')], ['profiles', T('البروفايلات والعروض', 'Company profiles & decks')], ['ad-edit', T('المونتاج الإعلاني', 'Ad video editing')], ['intro-videos', T('الفيديوهات التعريفية', 'Brand & intro videos')], ['event-videos', T('فيديوهات المناسبات والفعاليات', 'Event videos')]] },
+  { title: T('التسويقية', 'Marketing'), items: [['copywriting', T('كتابة المحتوى التسويقي', 'Marketing copywriting')], ['content-plan', T('خطة المحتوى الشهرية', 'Monthly content plan')], ['community', T('إدارة التفاعل', 'Community management')], ['kpi', T('تحليل الأداء', 'Performance analysis')]] },
+  { title: T('لينكدإن', 'LinkedIn'), items: [['li-profile', T('تحسين الحساب', 'Profile optimization')], ['li-content', T('محتوى أسبوعي متخصص', 'Weekly expert content')], ['li-jobs', T('التقديم لفرص العمل', 'Job application support')], ['li-coaching', T('جلسات تدريب شخصية', '1:1 coaching sessions')], ['li-audit', T('تدقيق حساب الشركة', 'Company page audit')], ['li-plan', T('خطة محتوى مؤسسي', 'Corporate content plan')], ['li-talent', T('استقطاب الكفاءات', 'Talent acquisition')], ['li-ads', T('حملات ممولة', 'Paid campaigns')]] },
+  { title: T('أخرى', 'Other'), items: [['other', T('لست متأكدًا بعد — ساعدوني', 'Not sure yet — help me')]] },
+];
+
+function initContact() {
+  const form = document.querySelector('.contact-form');
+  if (!form) return;
+  const KEY = 'puzzlex-services';
+  const known = new Set(SERVICE_GROUPS.flatMap((g) => g.items.map(([id]) => id)));
+  const PAD = Math.ceil(100 * TAB_DEPTH + 4);
+  const box = `${-PAD} ${-PAD} ${100 + 2 * PAD} ${100 + 2 * PAD}`;
+  const mini = `<svg class="opt-piece" viewBox="${box}" aria-hidden="true"><path d="${jigsawD({ t: 0, b: 0, l: -1, r: 1 }, 100, 100)}"/></svg>`;
+
+  // picked services: the link from the services page wins, then whatever this tab remembers
+  const fromUrl = (new URLSearchParams(location.search).get('services') || '').split(',').filter((id) => known.has(id));
+  let stored = [];
+  try { stored = JSON.parse(sessionStorage.getItem(KEY) || '[]').filter((id) => known.has(id)); } catch (e) { stored = []; }
+  const picked = new Set(fromUrl.length ? fromUrl : stored);
+
+  const groupsEl = form.querySelector('.pieces-groups');
+  groupsEl.innerHTML = SERVICE_GROUPS.map((g) => `
+    <div class="pieces-group">
+      <span class="pieces-group-title">${g.title}</span>
+      <div class="pieces-opts">${g.items.map(([id, name]) => `
+        <button class="piece-opt" type="button" data-id="${id}" aria-pressed="${picked.has(id)}">${mini}<span>${name}</span></button>`).join('')}
+      </div>
+    </div>`).join('');
+  const hint = form.querySelector('.pieces-hint');
+  hint.hidden = !picked.size;
+
+  const save = () => {
+    try { sessionStorage.setItem(KEY, JSON.stringify([...picked].filter((id) => id !== 'other'))); } catch (e) { /* just not remembered */ }
+  };
+
+  const fields = {
+    name: { el: form.querySelector('#f-name'), err: form.querySelector('#e-name'), check: (v) => (v.trim().length < 2 ? T('اكتب اسمك من فضلك.', 'Please enter your name.') : '') },
+    email: { el: form.querySelector('#f-email'), err: form.querySelector('#e-email'), check: (v) => (!v.trim() ? T('نحتاج بريدك لنعود إليك.', 'We need your email to get back to you.') : !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? T('يبدو أن البريد غير مكتمل.', 'That email looks incomplete.') : '') },
+    phone: { el: form.querySelector('#f-phone'), err: form.querySelector('#e-phone'), check: (v) => (v.trim() && !/^\+?[\d\s()-]{7,20}$/.test(v.trim()) ? T('اكتب الرقم بالأرقام فقط، مع رمز الدولة إن أمكن.', 'Digits only, with the country code if you can.') : '') },
+    message: { el: form.querySelector('#f-message'), err: form.querySelector('#e-message'), check: (v) => (v.trim().length < 10 ? T('أخبرنا بجملة أو جملتين عن مشروعك.', 'Tell us a sentence or two about your project.') : '') },
+  };
+  const servicesErr = form.querySelector('#e-services');
+  const piecesField = form.querySelector('.pieces-field');
+
+  const show = (f, msg) => {
+    f.err.textContent = msg;
+    f.el.setAttribute('aria-invalid', String(!!msg));
+    f.el.closest('.field').classList.toggle('has-error', !!msg);
+  };
+  const checkServices = () => {
+    const msg = picked.size ? '' : T('اختر قطعة واحدة على الأقل، أو «لست متأكدًا بعد».', 'Pick at least one piece, or “Not sure yet”.');
+    servicesErr.textContent = msg;
+    piecesField.classList.toggle('has-error', !!msg);
+    return !msg;
+  };
+  // errors appear once a field has been left (or on submit), then update live while typing
+  Object.values(fields).forEach((f) => {
+    f.el.addEventListener('blur', () => { f.touched = true; show(f, f.check(f.el.value)); });
+    f.el.addEventListener('input', () => { if (f.touched) show(f, f.check(f.el.value)); });
+  });
+
+  groupsEl.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.piece-opt');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const on = !picked.has(id);
+    if (on) picked.add(id); else picked.delete(id);
+    btn.setAttribute('aria-pressed', String(on));
+    save();
+    if (servicesErr.textContent) checkServices();
+    if (on) {
+      playClick();
+      if (!REDUCED) gsap.fromTo(btn.querySelector('.opt-piece'), { rotation: -120, scale: 0.4 }, { rotation: 0, scale: 1, duration: 0.5, ease: 'back.out(2)' });
+    }
+  });
+
+  const done = form.querySelector('.form-done');
+  const body = [...form.children].filter((el) => el !== done);
+  done.querySelector('.done-piece').innerHTML = `<path d="${jigsawD({ t: 1, r: -1, b: 1, l: -1 }, 100, 100)}"/><path class="tick" d="M28 52l15 15 30-32"/>`;
+
+  const celebrate = () => {
+    const h = form.offsetHeight;
+    body.forEach((el) => { el.hidden = true; });
+    done.hidden = false;
+    playClick();
+    form.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+    if (REDUCED) return;
+    gsap.fromTo(form, { minHeight: h }, { minHeight: 0, duration: 0.6, ease: 'power2.inOut', clearProps: 'minHeight' });
+    gsap.from(done.querySelector('.done-piece'), { y: -160, rotation: -200, scale: 0.4, duration: 0.9, ease: 'bounce.out' });
+    gsap.from(done.querySelectorAll('h2, p, .done-again'), { y: 20, autoAlpha: 0, duration: 0.5, stagger: 0.08, delay: 0.5, ease: 'power3.out' });
+    // little pieces burst outwards when the big one lands
+    const burst = done.querySelector('.done-burst');
+    burst.innerHTML = Array.from({ length: 14 }, () => mini).join('');
+    [...burst.children].forEach((p, i) => {
+      const a = (i / 14) * Math.PI * 2 + Math.random() * 0.3, d = 110 + Math.random() * 120;
+      gsap.fromTo(p, { x: 0, y: 0, scale: 0.3, rotation: 0, autoAlpha: 1 },
+        { x: Math.cos(a) * d, y: Math.sin(a) * d * 0.8, rotation: (Math.random() * 2 - 1) * 360, scale: 0.5 + Math.random() * 0.6, autoAlpha: 0, duration: 1.2 + Math.random() * 0.5, delay: 0.55, ease: 'power3.out' });
+    });
+  };
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    let firstBad = null;
+    Object.values(fields).forEach((f) => {
+      f.touched = true;
+      const msg = f.check(f.el.value);
+      show(f, msg);
+      if (msg && !firstBad) firstBad = f.el;
+    });
+    if (!checkServices() && !firstBad) firstBad = groupsEl.querySelector('.piece-opt');
+    if (firstBad) {
+      firstBad.focus({ preventScroll: true });
+      firstBad.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
+      if (!REDUCED) gsap.fromTo(form.querySelector('.form-submit'), { x: 0 }, { x: 8, duration: 0.07, repeat: 5, yoyo: true, ease: 'sine.inOut', clearProps: 'x' });
+      return;
+    }
+    // Concept only: nothing leaves the browser. Wire this to the real endpoint later.
+    done.querySelector('.done-name').textContent = fields.name.el.value.trim().split(/\s+/)[0];
+    celebrate();
+  });
+
+  done.querySelector('.done-again').addEventListener('click', () => {
+    form.reset();
+    Object.values(fields).forEach((f) => { f.touched = false; show(f, ''); });
+    done.hidden = true;
+    body.forEach((el) => { el.hidden = false; });
+    hint.hidden = !picked.size;
+    fields.name.el.focus();
+  });
+
+  // placeholder links (WhatsApp / socials) do nothing until the real ones arrive
+  document.querySelectorAll('.contact-card a[href="#"]').forEach((a) => a.addEventListener('click', (ev) => ev.preventDefault()));
+
+  if (!REDUCED) {
+    gsap.from('.contact-form > .form-row, .contact-form > .field, .contact-form > .form-foot', { y: 30, autoAlpha: 0, duration: 0.7, stagger: 0.07, ease: 'power3.out', delay: 0.15 });
+    gsap.from('.contact-card', { y: 30, autoAlpha: 0, duration: 0.8, ease: 'power3.out', delay: 0.35 });
+  }
+}
+
+/* ---------- 404 · a 3×3 board with its centre missing; click the stray piece to put it back ---------- */
+function initLost() {
+  const wrap = document.querySelector('.lost-board');
+  if (!wrap) return;
+  const U = 100, PAD = 40;
+  const H = [[-1, -1, 1], [1, 1, -1]], V = [[1, -1], [-1, 1], [1, -1]]; // the centre has a tab on every side
+  const edges = (r, c) => ({ t: r ? -H[r - 1][c] : 0, b: r < 2 ? H[r][c] : 0, l: c ? -V[r][c - 1] : 0, r: c < 2 ? V[r][c] : 0 });
+  let tiles = '';
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
+    if (r !== 1 || c !== 1) tiles += `<path class="tile" d="${jigsawD(edges(r, c), U, U, c * U, r * U)}"/>`;
+  }
+  const hole = jigsawD(edges(1, 1), U, U, U, U);
+  wrap.innerHTML = `<svg viewBox="${-PAD} ${-PAD} ${300 + 2 * PAD} ${300 + 2 * PAD}" aria-hidden="false">
+    ${tiles}<path class="hole" d="${hole}"/>
+    <g class="lost-piece" role="button" tabindex="0" aria-label="${T('أعد القطعة إلى مكانها', 'Put the piece back')}">
+      <path d="${hole}"/><text x="150" y="152" text-anchor="middle" dominant-baseline="middle">?</text>
+    </g></svg>`;
+
+  const piece = wrap.querySelector('.lost-piece');
+  const hint = document.querySelector('.lost-hint');
+  // the stray piece rests off the board's corner, tilted
+  const away = { x: EN ? 150 : -150, y: -150, r: EN ? 24 : -24 };
+  // tween a plain object and write the SVG transform ourselves: rotating about the hole's centre stays exact
+  const pos = { ...away };
+  const draw = () => piece.setAttribute('transform', `translate(${pos.x} ${pos.y}) rotate(${pos.r} 150 150)`);
+  draw();
+  const float = () => (REDUCED ? null : gsap.to(pos, { y: away.y - 8, r: away.r + (EN ? 3 : -3), duration: 1.8, ease: 'sine.inOut', yoyo: true, repeat: -1, onUpdate: draw }));
+  float();
+
+  let home = false;
+  const toggle = () => {
+    home = !home;
+    gsap.killTweensOf(pos);
+    gsap.to(pos, home
+      ? { x: 0, y: 0, r: 0, duration: REDUCED ? 0 : 0.7, ease: 'back.out(1.4)', onUpdate: draw, onComplete: playClick }
+      : { ...away, duration: REDUCED ? 0 : 0.6, ease: 'power3.out', onUpdate: draw, onComplete: float });
+    piece.querySelector('text').textContent = home ? '✓' : '?';
+    if (hint) hint.textContent = home
+      ? T('هكذا أفضل. لكن الصفحة التي طلبتها ما زالت غير موجودة — جرّب أحد الروابط.', 'Much better. The page you asked for still isn’t here, though — try one of these links.')
+      : T('اضغط القطعة لتعيدها إلى مكانها.', 'Click the piece to put it back.');
+  };
+  piece.addEventListener('click', toggle);
+  piece.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(); } });
+}
+
+/* ---------- boot ---------- */
+(async function initPages() {
+  await document.fonts.ready;
+  initTray();
+  initReasons();
+  initVision();
+  initServiceHero();
+  initServicePicker();
+  initSegmented();
+  initServiceReveal();
+  initWork();
+  initProject();
+  initContact();
+  initLost();
+  ScrollTrigger.refresh();
+})();
