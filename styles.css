@@ -1726,7 +1726,10 @@ span.tmo-face { display: grid; place-items: center; background: var(--lime); col
 .tmo:hover .tmo-hint { color: var(--accent-text); }
 
 /* back: what they said */
-.tmo-quote { flex: 1 1 auto; min-height: 0; width: 100%; overflow-y: auto; font-size: clamp(13.5px, 1vw, 15px); line-height: 1.9; text-align: start; scrollbar-width: thin; }
+.tmo-quote { flex: 1 1 auto; min-height: 0; width: 100%; overflow-y: auto; font-size: clamp(13.5px, 1vw, 15px); line-height: 1.9; text-align: start; scrollbar-width: none; overscroll-behavior: contain; }
+.tmo-quote::-webkit-scrollbar { display: none; }
+/* a review longer than the piece still scrolls (wheel, finger): no bar, the last line fades until the end is reached */
+.tmo-quote.has-more { -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
 .tmo-quote::before { font-size: 46px; line-height: .6; }
 .tmo-meta { display: flex; flex-direction: column; gap: 2px; width: 100%; padding-top: 12px; border-top: 1px solid var(--line); text-align: start; font-size: 13px; }
 .tmo-meta b { font-weight: 800; font-size: 14px; }

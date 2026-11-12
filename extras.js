@@ -220,6 +220,12 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
       sidePad(front, e);
       sidePad(back, mirrored);
     });
+    // a review taller than its piece scrolls without a bar; the fade shows there's more until the end is reached
+    list.querySelectorAll('.tmo-quote').forEach((q) => {
+      const more = () => q.classList.toggle('has-more', q.scrollTop + q.clientHeight < q.scrollHeight - 4);
+      if (!q.dataset.watched) { q.dataset.watched = '1'; q.addEventListener('scroll', more, { passive: true }); }
+      more();
+    });
     render();
   }
 
