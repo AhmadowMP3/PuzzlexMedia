@@ -2,8 +2,8 @@
      the back-to-top piece (bottom right): its outline draws itself as you read, it turns lime at the end,
        and a press sends it flying up while the page follows
      the WhatsApp button's greeting bubble (the button itself is added by the server once there's a number)
-     the home page's service request picker, the client-feedback slider's dots, and the partner logos strip
-   Uses T(), SITE, ROOT, REDUCED and EN from main.js, jigsawD() and TAB_DEPTH from pages.js / main.js. */
+     the home page's service request picker, the client-feedback orbit, and the partner logos strip
+   Uses T(), SITE, ROOT, REDUCED, EN, piecePath() and playClick() from main.js, jigsawD() and TAB_DEPTH from pages.js / main.js. */
 
 /* ---------- back to top: a jigsaw piece with its knob pointing up ---------- */
 (function initToTop() {
@@ -142,28 +142,203 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
   }
 })();
 
-/* ---------- home · client feedback: on phones the cards slide sideways; the dots show where you are ---------- */
-(function initFeedbackSlider() {
-  const list = document.querySelector('.testimonials .tm-list');
-  const dotsEl = document.querySelector('.testimonials .tm-dots');
-  if (!list || !dotsEl) return;
-  const cards = [...list.children];
-  if (cards.length < 2) return;
-  dotsEl.innerHTML = cards.map(() => '<i></i>').join('');
-  const dots = [...dotsEl.children];
-  const active = () => {
-    const mid = list.getBoundingClientRect().left + list.clientWidth / 2;
-    let best = 0, dist = Infinity;
-    cards.forEach((c, i) => {
-      const r = c.getBoundingClientRect();
-      const d2 = Math.abs(r.left + r.width / 2 - mid);
-      if (d2 < dist) { dist = d2; best = i; }
-    });
-    dots.forEach((d3, i) => d3.classList.toggle('on', i === best));
+/* ---------- home · client feedback: a ring of interlocking pieces that turns in 3D ----------
+   Front: photo, name, stars. A click flips the piece to the review. The ring turns by itself, stops while the
+   pointer or focus is on it, and can be dragged or stepped with the arrows. A short list is repeated round the
+   back of the ring so it closes; the copies are decoration (hidden from screen readers and the keyboard). */
+(function initFeedbackOrbit() {
+  const list = document.querySelector('.testimonials [data-orbit]');
+  if (!list || !window.gsap) return;
+  const real = [...list.children];
+  if (real.length < 3) return; // too few for a ring: the plain grid stays
+
+  // at least 10 places round the ring, filled with whole rounds of the reviews
+  const slots = Math.max(real.length, Math.ceil(10 / real.length) * real.length);
+  for (let k = real.length; k < slots; k++) {
+    const copy = real[k % real.length].cloneNode(true);
+    copy.setAttribute('aria-hidden', 'true');
+    copy.inert = true;
+    copy.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+    copy.querySelectorAll('[aria-controls]').forEach((el) => el.removeAttribute('aria-controls'));
+    list.append(copy);
+  }
+  const items = [...list.children];
+  const N = items.length, STEP = 360 / N;
+  // the edge between piece i and piece i+1: a tab on one side is the other's cut-in, all the way round
+  const edge = items.map((_, i) => (i % 2 ? 1 : -1));
+  const edgesOf = (i) => ({ t: 0, b: 0, r: edge[i], l: -edge[(i - 1 + N) % N] });
+
+  const stage = document.createElement('div');
+  stage.className = 'tmo-stage';
+  list.before(stage);
+  stage.append(list);
+  list.classList.add('is-3d');
+
+  // the arrows sit in the section's footer; "next" points the way the page reads
+  const foot = document.querySelector('.testimonials .tm-foot');
+  const nav = document.createElement('div');
+  nav.className = 'tmo-nav';
+  nav.innerHTML = `<button type="button" class="tmo-prev" aria-label="${T('الرأي السابق', 'Previous review')}"><span aria-hidden="true">${EN ? '←' : '→'}</span></button>`
+    + `<button type="button" class="tmo-next" aria-label="${T('الرأي التالي', 'Next review')}"><span aria-hidden="true">${EN ? '→' : '←'}</span></button>`;
+  if (foot) foot.prepend(nav);
+
+  const state = { rot: 0 };
+  let W = 0, H = 0, R = 0, flipped = null;
+
+  // the outline of one face; the back is the same piece seen from behind, so its left and right swap
+  const shapeSvg = (e, w, h, tab, pad) => {
+    let d = '';
+    const n = (v) => +v.toFixed(1);
+    piecePath({
+      moveTo: (x, y) => { d += `M${n(x)} ${n(y)}`; },
+      lineTo: (x, y) => { d += `L${n(x)} ${n(y)}`; },
+      bezierCurveTo: (a, b, c, dd, x, y) => { d += `C${n(a)} ${n(b)} ${n(c)} ${n(dd)} ${n(x)} ${n(y)}`; },
+      closePath: () => { d += 'Z'; },
+    }, 0, 0, w, h, e, tab);
+    return `<svg class="tmo-shape" viewBox="${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}" aria-hidden="true"><path d="${d}"/></svg>`;
   };
-  list.addEventListener('scroll', () => requestAnimationFrame(active), { passive: true });
-  addEventListener('resize', active);
-  active();
+
+  function layout() {
+    const box = stage.clientWidth || window.innerWidth;
+    W = Math.round(Math.min(290, Math.max(200, box * (box < 700 ? 0.58 : 0.23))));
+    H = Math.round(W * 1.22);
+    const tab = W * 0.46, pad = Math.ceil(tab * TAB_DEPTH + 4);
+    R = W / 2 / Math.tan(Math.PI / N);
+    stage.style.setProperty('--w', `${W}px`);
+    stage.style.setProperty('--h', `${H}px`);
+    stage.style.setProperty('--pad', `${pad}px`);
+    // text keeps clear of a cut-in (it reaches into the piece); a tab sticks out, so that side needs no extra room
+    const cut = Math.ceil(tab * TAB_DEPTH + 10), plain = 16;
+    const sidePad = (el, e) => { el.style.paddingLeft = `${e.l < 0 ? cut : plain}px`; el.style.paddingRight = `${e.r < 0 ? cut : plain}px`; };
+    items.forEach((it, i) => {
+      const e = edgesOf(i);
+      it.style.transform = `rotateY(${i * STEP}deg) translateZ(${R}px)`;
+      it.querySelectorAll('.tmo-shape').forEach((s) => s.remove());
+      const front = it.querySelector('.tmo-front'), back = it.querySelector('.tmo-back'), mirrored = { ...e, l: e.r, r: e.l };
+      front.insertAdjacentHTML('afterbegin', shapeSvg(e, W, H, tab, pad));
+      back.insertAdjacentHTML('afterbegin', shapeSvg(mirrored, W, H, tab, pad));
+      sidePad(front, e);
+      sidePad(back, mirrored);
+    });
+    render();
+  }
+
+  // the ring's turn, and which pieces face us (the ones turned away are hidden, so their backs never show)
+  const norm = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
+  let frontIndex = 0;
+  function render() {
+    list.style.transform = `translateZ(${-R}px) rotateY(${state.rot}deg)`;
+    let best = Infinity;
+    items.forEach((it, i) => {
+      const a = Math.abs(norm(i * STEP + state.rot));
+      it.classList.toggle('is-away', a > 100);
+      it.style.setProperty('--d', Math.min(1, a / 90).toFixed(3));
+      if (a < best) { best = a; frontIndex = i; }
+    });
+    items.forEach((it, i) => it.classList.toggle('is-front', i === frontIndex));
+  }
+
+  const unflip = () => {
+    if (!flipped) return;
+    flipped.classList.remove('is-flipped');
+    flipped.querySelector('.tmo-front')?.setAttribute('aria-expanded', 'false');
+    flipped = null;
+  };
+  // turn the ring so piece i faces us, the short way round
+  const turnTo = (i, duration = 0.9) => {
+    const target = state.rot + norm(-i * STEP - state.rot);
+    return gsap.to(state, { rot: target, duration: REDUCED ? 0 : duration, ease: 'power3.inOut', overwrite: true, onUpdate: render });
+  };
+  const step = (dir) => { unflip(); turnTo(frontIndex + dir); };
+
+  function flip(it) {
+    const was = it === flipped;
+    unflip();
+    if (was) return;
+    const i = items.indexOf(it);
+    if (i !== frontIndex) turnTo(i, 0.6);
+    it.classList.add('is-flipped');
+    it.querySelector('.tmo-front')?.setAttribute('aria-expanded', 'true');
+    flipped = it;
+    playClick();
+  }
+
+  // drag: one piece's width of pointer travel turns the ring one place; let go and it settles on the nearest piece
+  let drag = null, moved = false;
+  stage.addEventListener('pointerdown', (ev) => {
+    if (ev.button !== 0) return;
+    drag = { x: ev.clientX, y: ev.clientY, rot: state.rot, last: ev.clientX, t: performance.now(), v: 0, id: ev.pointerId };
+    moved = false;
+    gsap.killTweensOf(state);
+  });
+  stage.addEventListener('pointermove', (ev) => {
+    if (!drag || ev.pointerId !== drag.id) return;
+    const dx = ev.clientX - drag.x;
+    if (!moved) {
+      if (Math.abs(dx) < 6) return;
+      if (Math.abs(ev.clientY - drag.y) > Math.abs(dx)) { drag = null; return; } // a vertical swipe scrolls the page
+      moved = true;
+      unflip();
+      stage.classList.add('is-dragging');
+      stage.setPointerCapture(ev.pointerId);
+    }
+    const now = performance.now();
+    drag.v = (ev.clientX - drag.last) / Math.max(1, now - drag.t);
+    drag.last = ev.clientX; drag.t = now;
+    state.rot = drag.rot + (dx / W) * STEP;
+    render();
+  });
+  const release = () => {
+    if (!drag) return;
+    stage.classList.remove('is-dragging');
+    if (moved) {
+      // a flick carries on a little before settling
+      const fling = gsap.utils.clamp(-2, 2, Math.round((drag.v * 220) / W));
+      const target = Math.round((state.rot / STEP) + fling) * STEP;
+      gsap.to(state, { rot: target, duration: REDUCED ? 0 : 0.7, ease: 'power3.out', overwrite: true, onUpdate: render });
+    }
+    drag = null;
+  };
+  stage.addEventListener('pointerup', release);
+  stage.addEventListener('pointercancel', release);
+  // a drag isn't a click
+  stage.addEventListener('click', (ev) => {
+    if (moved) { ev.preventDefault(); ev.stopPropagation(); moved = false; return; }
+    const it = ev.target.closest('.tmo');
+    if (it && !it.classList.contains('is-away')) flip(it);
+  }, true);
+
+  nav.querySelector('.tmo-next').addEventListener('click', () => step(1));
+  nav.querySelector('.tmo-prev').addEventListener('click', () => step(-1));
+  // the keyboard: Tab brings a piece round to the front, Enter / Space flips it (a button's own click, handled by the
+  // stage above), Esc flips it back
+  list.addEventListener('focusin', (ev) => {
+    const it = ev.target.closest('.tmo');
+    if (it && items.indexOf(it) !== frontIndex) turnTo(items.indexOf(it), 0.6);
+  });
+  list.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && flipped) { const btn = flipped.querySelector('.tmo-front'); unflip(); btn?.focus({ preventScroll: true }); }
+  });
+
+  // turns on its own, one place every few seconds, only while nobody is reading it and it's on screen
+  let hover = false, inView = false;
+  stage.addEventListener('pointerenter', () => { hover = true; });
+  stage.addEventListener('pointerleave', () => { hover = false; release(); });
+  new IntersectionObserver(([e]) => { inView = e.isIntersecting; }, { threshold: 0.3 }).observe(stage);
+  if (!REDUCED) {
+    setInterval(() => {
+      if (hover || flipped || drag || !inView || document.hidden || list.contains(document.activeElement)) return;
+      step(1);
+    }, 3800);
+  }
+
+  layout();
+  let lastW = window.innerWidth;
+  window.addEventListener('resize', () => {
+    if (window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
+    layout();
+  });
 })();
 
 /* ---------- home · every partner logo on a strip that keeps moving (two rows, opposite ways) ---------- */
