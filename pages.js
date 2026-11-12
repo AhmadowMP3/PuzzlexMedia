@@ -573,9 +573,9 @@ function initServiceReveal() {
   });
 }
 
-/* ---------- Work · placeholder covers ---------- */
-// A stand-in image for a project until its real files arrive: the client's colours, a faint jigsaw grid,
-// the client's logo on a tile, and a clear "placeholder" label.
+/* ---------- Work · generated covers ---------- */
+// The card picture for a project with no uploaded cover: the client's colours, a faint jigsaw grid and the
+// client's logo on a tile.
 const hashStr = (s) => [...s].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
 
 // project texts come from the admin panel: always inserted escaped
@@ -641,7 +641,7 @@ function coverSVG(p, variant = 0, w = 400, h = 300) {
   const [fx, fy] = spots[variant % spots.length];
   const tx = w * fx - tile / 2, ty = h * fy - tile / 2;
   const angle = variant ? (R() * 2 - 1) * 8 : 0;
-  return `<svg class="cover" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${T('صورة مؤقتة', 'Placeholder image')} — ${escHtml(p.client)}">
+  return `<svg class="cover" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${escHtml(p.client)}">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${p.colors[0]}"/><stop offset="1" stop-color="${p.colors[1]}"/>
     </linearGradient></defs>
@@ -651,10 +651,6 @@ function coverSVG(p, variant = 0, w = 400, h = 300) {
       <rect x="${tx + 6}" y="${ty + 10}" width="${tile}" height="${tile}" rx="${tile * 0.18}" fill="rgba(0,0,0,.25)"/>
       <rect x="${tx}" y="${ty}" width="${tile}" height="${tile}" rx="${tile * 0.18}" fill="#fff"/>
       <image href="${escHtml(assetUrl(p.logo))}" x="${tx + tile * 0.08}" y="${ty + tile * 0.08}" width="${tile * 0.84}" height="${tile * 0.84}" preserveAspectRatio="xMidYMid meet"/>
-    </g>
-    <g transform="translate(${w - 14} ${h - 14})">
-      <rect x="-86" y="-22" width="86" height="22" rx="11" fill="rgba(0,0,0,.35)"/>
-      <text x="-43" y="-7" text-anchor="middle" font-family="Alexandria" font-size="10.5" font-weight="600" fill="rgba(255,255,255,.85)">${T('صورة مؤقتة', 'Placeholder')}</text>
     </g>
   </svg>`;
 }
@@ -851,25 +847,25 @@ function initProject() {
     const n = run++;
     return n % 3 === 0 || (n % 3 === 1 && isFile(entries[k + 1])) ? [800, 450, 'wide'] : [400, 300, ''];
   };
-  const frames = entries.length
-    ? entries.map((entry, k) => [k, ...shape(entry, k), entry])
-    : [[0, 800, 400, 'wide'], [1, 400, 300, ''], [2, 400, 300, ''], [3, 800, 340, 'wide']];
+  // no files yet: no stand-in pictures (the server leaves the gallery out of the HTML too)
+  page.querySelector('.work-note')?.remove();
   const gallery = page.querySelector('.project-gallery');
-  gallery.innerHTML = frames.map(([v, w, h, cls, entry]) => galleryFigure(p, entry || {}, v, w, h, cls)).join('');
-  // one thing with sound at a time (the silent loops carry on), and a file that won't load says so instead of sitting broken
-  gallery.addEventListener('play', (ev) => {
-    if (ev.target.muted) return;
-    gallery.querySelectorAll('video, audio').forEach((m) => { if (m !== ev.target && !m.muted) m.pause(); });
-  }, true);
-  gallery.addEventListener('error', (ev) => {
-    if (!ev.target.matches('video, audio')) return;
-    const note = document.createElement('p');
-    note.className = 'gallery-error';
-    note.textContent = T('تعذّر تشغيل هذا الملف الآن.', 'This file can’t be played right now.');
-    ev.target.replaceWith(note);
-  }, true);
-  // the "these are placeholders" note is only true while there are no real files
-  if (p.gallery.length) page.querySelector('.work-note')?.remove();
+  if (!entries.length) gallery?.remove();
+  if (entries.length && gallery) {
+    gallery.innerHTML = entries.map((entry, k) => [k, ...shape(entry, k), entry]).map(([v, w, h, cls, entry]) => galleryFigure(p, entry, v, w, h, cls)).join('');
+    // one thing with sound at a time (the silent loops carry on), and a file that won't load says so instead of sitting broken
+    gallery.addEventListener('play', (ev) => {
+      if (ev.target.muted) return;
+      gallery.querySelectorAll('video, audio').forEach((m) => { if (m !== ev.target && !m.muted) m.pause(); });
+    }, true);
+    gallery.addEventListener('error', (ev) => {
+      if (!ev.target.matches('video, audio')) return;
+      const note = document.createElement('p');
+      note.className = 'gallery-error';
+      note.textContent = T('تعذّر تشغيل هذا الملف الآن.', 'This file can’t be played right now.');
+      ev.target.replaceWith(note);
+    }, true);
+  }
 
   const prev = PROJECTS[(i - 1 + PROJECTS.length) % PROJECTS.length];
   const next = PROJECTS[(i + 1) % PROJECTS.length];

@@ -12,15 +12,16 @@
   const pieces = [...el.querySelectorAll('.loader-piece')];
   const num = el.querySelector('.loader-num');
   const MIN_MS = reduced ? 0 : 600;  // a glimpse of the puzzle, not a wait: the page is what people came for
-  const MAX_MS = 4000;               // never hold the page hostage to a slow resource
+  const MAX_MS = 2500;               // never hold the page hostage to a slow resource
   const t0 = performance.now();
 
-  // real progress: fonts, every image on the page, then the window's load event
+  // real progress: fonts, the page's own scripts (deferred, so done by DOMContentLoaded) and the images above the
+  // fold; not the window's load event, which also waits for audio and everything else and only delays the page
   let total = 2, done = 0;
   const tick = () => { done++; };
   document.fonts.ready.then(tick, tick);
-  window.addEventListener('load', tick, { once: true });
   document.addEventListener('DOMContentLoaded', () => {
+    tick();
     // a lazy image far down the page doesn't load until it's scrolled to: waiting for it would always run to MAX_MS
     const imgs = [...document.images].filter((img) => !img.closest('.loader') && img.loading !== 'lazy');
     total += imgs.length;

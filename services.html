@@ -27,10 +27,9 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="PuzzleX Media — نحن القطعة الناقصة في أحجيتك">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=87">
+  <link rel="preload" href="assets/fonts/alexandria-arabic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/fonts/alexandria.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=88">
 </head>
 <body class="page">
   <div class="loader" role="status" aria-live="polite" aria-label="جارٍ التحميل">
@@ -44,7 +43,7 @@
       <p class="loader-count"><span class="loader-num">0</span>%</p>
     </div>
   </div>
-  <script src="loader.js?v=57"></script>
+  <script src="loader.js?v=58"></script>
 
 
   <header class="topbar topbar--page">
@@ -73,7 +72,7 @@
     <section class="page-hero svc-hero">
       <div class="page-hero-copy">
         <p class="kicker">OUR SERVICES</p>
-        <h1 class="page-title">كل خدمة قطعة<br><span class="hl">من أحجيتك.</span></h1>
+        <h1 class="page-title">كل خدمة قطعة <br><span class="hl">من أحجيتك.</span></h1>
         <p class="lead">نصمّم، ونصوّر، ونكتب، ونبرمج، وندير حضورك الرقمي — اختر القطع التي تحتاجها، ونحن نركّبها في صورة واحدة متكاملة.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#creative">ابدأ باختيار القطع</a>
@@ -226,6 +225,36 @@
       </div>
     </section>
 
+    <!-- ===== Frequently asked questions ===== -->
+    <section class="svc-group svc-faq" id="faq" aria-labelledby="faq-title">
+      <header class="svc-head">
+        <p class="kicker">FAQ</p>
+        <h2 id="faq-title" class="section-title">أسئلة شائعة</h2>
+      </header>
+      <div class="faq-list">
+          <details class="faq">
+            <summary>ما الخدمات التي تقدّمها PuzzleX Media؟</summary>
+            <p>نعمل كقسم إبداعي جاهز للشركات: الهوية البصرية، وتصميم السوشال ميديا والإعلانات والمطبوعات، والمونتاج والفيديو، والمحتوى التسويقي وإدارة التفاعل وتحليل الأداء، وخدمات لينكدإن للأفراد والشركات، وبرمجة أنظمة CRM وERP ونقاط البيع والمواقع والتطبيقات.</p>
+          </details>
+          <details class="faq">
+            <summary>هل يمكنني طلب خدمة واحدة فقط؟</summary>
+            <p>نعم. كل خدمة في هذه الصفحة قطعة مستقلة: اختر قطعة واحدة أو أكثر، ثم أرسلها لنا مع وصف قصير لمشروعك.</p>
+          </details>
+          <details class="faq">
+            <summary>هل خدمات لينكدإن للأفراد أم للشركات؟</summary>
+            <p>للاثنين. للأفراد: تحسين الحساب، والمحتوى الأسبوعي المتخصص، والتقديم لفرص العمل، وجلسات التدريب الشخصية. وللشركات: تدقيق حساب الشركة، وخطة المحتوى المؤسسي، واستقطاب الكفاءات، والحملات الممولة.</p>
+          </details>
+          <details class="faq">
+            <summary>كم تكلفة الخدمة؟</summary>
+            <p>تختلف التكلفة حسب نطاق كل مشروع، لذلك لا نضع سعراً واحداً للجميع. أرسل لنا القطع التي تحتاجها، ونرسل لك عرض سعر واضحاً قبل أن نبدأ.</p>
+          </details>
+          <details class="faq">
+            <summary>متى تتواصلون معي بعد إرسال الطلب؟</summary>
+            <p>خلال 48 ساعة، عبر واتساب على الرقم الذي تكتبه في نموذج التواصل.</p>
+          </details>
+      </div>
+    </section>
+
     <!-- ===== Call to action ===== -->
     <section class="cta-band">
       <div class="cta-band-inner">
@@ -296,15 +325,15 @@
     </div>
   </footer>
 
-  <script src="assets/vendor/gsap.min.js?v=3125"></script>
-  <script src="assets/vendor/ScrollTrigger.min.js?v=3125"></script>
-  <script src="assets/vendor/lenis.min.js?v=1327"></script>
-  <script src="scroll.js?v=2"></script>
-  <script src="main.js?v=67"></script>
-  <script src="sections.js?v=61"></script>
-  <script src="cursor.js?v=55"></script>
-  <script src="music.js?v=3"></script>
-  <script src="pages.js?v=74"></script>
-  <script src="extras.js?v=3"></script>
+  <script src="assets/vendor/gsap.min.js?v=3125" defer></script>
+  <script src="assets/vendor/ScrollTrigger.min.js?v=3125" defer></script>
+  <script src="assets/vendor/lenis.min.js?v=1327" defer></script>
+  <script src="scroll.js?v=3" defer></script>
+  <script src="main.js?v=67" defer></script>
+  <script src="sections.js?v=61" defer></script>
+  <script src="cursor.js?v=55" defer></script>
+  <script src="music.js?v=3" defer></script>
+  <script src="pages.js?v=75" defer></script>
+  <script src="extras.js?v=4" defer></script>
 </body>
 </html>

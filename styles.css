@@ -916,6 +916,20 @@ html.has-cursor, html.has-cursor * { cursor: none !important; }
 .svc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
 .svc-col-title { font-weight: 800; font-size: 15px; color: var(--muted); margin-bottom: 18px; }
 
+/* frequently asked questions (services page): plain <details>, no script needed */
+.faq-list { display: grid; gap: 12px; min-width: 0; }
+.faq { border: 1px solid var(--line); border-radius: 18px; background: rgba(var(--fg-rgb), .03); transition: border-color .25s ease; }
+.faq[open] { border-color: rgba(215, 255, 0, .45); }
+.faq summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 20px 24px; font-weight: 800; font-size: clamp(16px, 1.3vw, 19px); line-height: 1.6;
+}
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; flex: none; font: 900 22px/1 var(--lat); color: var(--accent-text); transition: transform .3s ease; }
+.faq[open] summary::after { transform: rotate(45deg); }
+.faq summary:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; border-radius: 18px; }
+.faq p { padding: 0 24px 22px; color: var(--muted); line-height: 1.9; }
+
 /* service cards interlock like a column of puzzle pieces: a notch on top, a tab below */
 .svc-list { list-style: none; }
 .svc-list li { position: relative; }

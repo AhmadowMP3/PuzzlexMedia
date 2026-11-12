@@ -92,18 +92,20 @@ const CSP_HEADER = process.env.CSP_ENFORCE === '0' ? 'Content-Security-Policy-Re
 const cspFor = (hashes) => [
   "default-src 'self'",
   `script-src 'self'${hashes.map((h) => ` 'sha256-${h}'`).join('')}${CLARITY_ID ? ' https://*.clarity.ms' : ''}`,
-  // stylesheets and <style> only from our own files (and Google Fonts); style="" attributes stay allowed, since the
+  // stylesheets, <style> and fonts only from our own files (the fonts are self-hosted); style="" attributes stay allowed, since the
   // pages and animations set CSS variables in them (they can't run code; images they name still need img-src)
-  "style-src 'self' https://fonts.googleapis.com",
-  "style-src-elem 'self' https://fonts.googleapis.com",
+  "style-src 'self'",
+  "style-src-elem 'self'",
   "style-src-attr 'unsafe-inline'",
-  "font-src 'self' https://fonts.gstatic.com",
+  "font-src 'self'",
   `img-src 'self' data: blob:${CLARITY_ID ? ' https://*.clarity.ms https://c.bing.com' : ''}`,
   `connect-src 'self'${CLARITY_ID ? ' https://*.clarity.ms https://c.bing.com' : ''}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'self'",
+  // some hosts add this as a second CSP header; with it here, that one can be switched off
+  'upgrade-insecure-requests',
   'report-uri /api/csp-report',
 ].join('; ');
 const inlineScriptHashes = (html) => [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
@@ -161,6 +163,9 @@ const hasFeedback = () => store.read('testimonials.json', []).some((t) => t.visi
 const articles = () => store.read('articles.json', []);
 const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'privacy.html',
   ...store.read('projects.json', { projects: [] }).projects.map((p) => `project.html?id=${encodeURIComponent(p.id)}`)];
+// the day each project last changed in the admin panel (lib/admin.js stamps it); nothing is guessed
+const projectDates = () => new Map(store.read('projects.json', { projects: [] }).projects
+  .filter((p) => /^\d{4}-\d{2}-\d{2}$/.test(p.updated || '')).map((p) => [`project.html?id=${encodeURIComponent(p.id)}`, p.updated]));
 // every indexable address, both languages (the sitemap's <loc>s; also what IndexNow submits)
 // each article only in the languages it's written in (lib/articles.js)
 const articleLangs = () => articles().filter((a) => a.published !== false)
@@ -172,12 +177,13 @@ const siteUrls = () => [...sitePaths().flatMap((p) => [`${SITE_URL}/${p}`, `${SI
 function sitemapEntry() {
   if (!sitemap || sitemap.version !== store.version) {
     const paths = sitePaths();
+    const dates = projectDates();
     const url = (lang, p) => esc(`${SITE_URL}/${lang === 'en' ? 'en/' : ''}${p}`);
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
 ${paths.flatMap((p) => ['ar', 'en'].map((lang) => `  <url>
     <loc>${url(lang, p)}</loc>
-    <xhtml:link rel="alternate" hreflang="ar" href="${url('ar', p)}"/>
+${dates.has(p) ? `    <lastmod>${dates.get(p)}</lastmod>\n` : ''}    <xhtml:link rel="alternate" hreflang="ar" href="${url('ar', p)}"/>
     <xhtml:link rel="alternate" hreflang="en" href="${url('en', p)}"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="${url('ar', p)}"/>
   </url>`)).join('\n')}
@@ -515,6 +521,8 @@ const server = http.createServer(async (req, res) => {
     if (host !== SITE_HOST && host.replace(/^www\./, '') === SITE_HOST.replace(/^www\./, '')) return redirect(res, SITE_URL + req.url);
     const index = p.match(/^((?:\/en)?\/)index(?:\.html)?$/);
     if (index) return redirect(res, index[1] + url.search);
+    // "/about.html/" (a link pasted with a slash) → "/about.html"
+    if (/\.html\/+$/.test(p)) return redirect(res, p.replace(/\/+$/, '') + url.search);
     if (!p.endsWith('/') && !path.extname(p) && p !== '/en' && p !== '/admin' && resolve(p + '.html')) return redirect(res, p + '.html' + url.search);
     // the English pages use relative links: they need the trailing slash; so does the admin panel
     if (p === '/en' || p === '/admin') return redirect(res, p + '/' + url.search);
@@ -568,10 +576,9 @@ const server = http.createServer(async (req, res) => {
       return send(req, res, 200, makeEntry(Buffer.from(html), '.html'), ext, { 'Cache-Control': 'no-cache' });
     }
     if (path.basename(file) === 'project.html') {
-      const page = entry.body.toString('utf8');
-      // no such project: pages.js says so, and search engines leave the address out
-      const html = projectPage(page, url.searchParams.get('id'), file.includes(`${path.sep}en${path.sep}`))
-        || page.replace('</head>', '<meta name="robots" content="noindex">\n</head>');
+      // no such project: a real 404, so search engines don't keep an empty shell under every mistyped id
+      const html = projectPage(entry.body.toString('utf8'), url.searchParams.get('id'), file.includes(`${path.sep}en${path.sep}`));
+      if (!html) return await notFound(req, res, p);
       entry = makeEntry(Buffer.from(html), '.html');
     }
     send(req, res, 200, entry, ext, { 'Cache-Control': cacheControl(ext, url.search.slice(1)) });

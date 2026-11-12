@@ -27,10 +27,10 @@
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="PuzzleX Media — We are the missing piece in your puzzle">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;600;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=87">
+  <link rel="preload" href="../assets/fonts/jakarta-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/fonts/alexandria.css?v=1">
+  <link rel="stylesheet" href="../assets/fonts/jakarta.css?v=1">
+  <link rel="stylesheet" href="../styles.css?v=88">
 </head>
 <body class="page">
   <div class="loader" role="status" aria-live="polite" aria-label="Loading">
@@ -44,7 +44,7 @@
       <p class="loader-count"><span class="loader-num">0</span>%</p>
     </div>
   </div>
-  <script src="../loader.js?v=57"></script>
+  <script src="../loader.js?v=58"></script>
 
 
   <header class="topbar topbar--page">
@@ -73,7 +73,7 @@
     <section class="page-hero svc-hero">
       <div class="page-hero-copy">
         <p class="kicker">OUR SERVICES</p>
-        <h1 class="page-title">Every service is a piece<br><span class="hl">of your puzzle.</span></h1>
+        <h1 class="page-title">Every service is a piece <br><span class="hl">of your puzzle.</span></h1>
         <p class="lead">We design, film, write, build software and run your digital presence — pick the pieces you need, and we’ll put them together into one complete picture.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="#creative">Start picking pieces</a>
@@ -226,6 +226,36 @@
       </div>
     </section>
 
+    <!-- ===== Frequently asked questions ===== -->
+    <section class="svc-group svc-faq" id="faq" aria-labelledby="faq-title">
+      <header class="svc-head">
+        <p class="kicker">FAQ</p>
+        <h2 id="faq-title" class="section-title">Frequently asked questions</h2>
+      </header>
+      <div class="faq-list">
+          <details class="faq">
+            <summary>What services does PuzzleX Media offer?</summary>
+            <p>We work as a ready-made creative department for businesses: visual identity; social media, ad and print design; video editing; marketing content, community management and performance analysis; LinkedIn services for individuals and companies; and CRM, ERP and POS systems, websites and apps.</p>
+          </details>
+          <details class="faq">
+            <summary>Can I order just one service?</summary>
+            <p>Yes. Every service on this page is a separate piece: pick one or several, then send them to us with a short description of your project.</p>
+          </details>
+          <details class="faq">
+            <summary>Are your LinkedIn services for individuals or companies?</summary>
+            <p>Both. For individuals: profile optimization, weekly expert content, job applications and one-to-one coaching. For companies: a company page audit, a corporate content plan, talent acquisition and paid campaigns.</p>
+          </details>
+          <details class="faq">
+            <summary>How much does a service cost?</summary>
+            <p>The cost depends on the scope of each project, so there is no single price for everyone. Send us the pieces you need and we will send you a clear quotation before we start.</p>
+          </details>
+          <details class="faq">
+            <summary>When will you contact me after I send a request?</summary>
+            <p>Within 48 hours, on WhatsApp, at the number you enter in the contact form.</p>
+          </details>
+      </div>
+    </section>
+
     <!-- ===== Call to action ===== -->
     <section class="cta-band">
       <div class="cta-band-inner">
@@ -296,15 +326,15 @@
     </div>
   </footer>
 
-  <script src="../assets/vendor/gsap.min.js?v=3125"></script>
-  <script src="../assets/vendor/ScrollTrigger.min.js?v=3125"></script>
-  <script src="../assets/vendor/lenis.min.js?v=1327"></script>
-  <script src="../scroll.js?v=2"></script>
-  <script src="../main.js?v=67"></script>
-  <script src="../sections.js?v=61"></script>
-  <script src="../cursor.js?v=55"></script>
-  <script src="../music.js?v=3"></script>
-  <script src="../pages.js?v=74"></script>
-  <script src="../extras.js?v=3"></script>
+  <script src="../assets/vendor/gsap.min.js?v=3125" defer></script>
+  <script src="../assets/vendor/ScrollTrigger.min.js?v=3125" defer></script>
+  <script src="../assets/vendor/lenis.min.js?v=1327" defer></script>
+  <script src="../scroll.js?v=3" defer></script>
+  <script src="../main.js?v=67" defer></script>
+  <script src="../sections.js?v=61" defer></script>
+  <script src="../cursor.js?v=55" defer></script>
+  <script src="../music.js?v=3" defer></script>
+  <script src="../pages.js?v=75" defer></script>
+  <script src="../extras.js?v=4" defer></script>
 </body>
 </html>

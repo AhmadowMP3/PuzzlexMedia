@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
   if (!REDUCED && window.gsap && window.ScrollTrigger) {
     gsap.from(section.querySelectorAll('.rq-card'), {
       y: 40, autoAlpha: 0, rotate: (i) => (i % 2 ? 2 : -2), duration: 0.8, stagger: 0.1, ease: 'power3.out',
-      scrollTrigger: { trigger: box, start: 'top 85%', once: true },
+      scrollTrigger: { trigger: box, start: 'top 85%', toggleActions: 'play none none none' }, // see scroll.js: not `once`
     });
   }
 })();

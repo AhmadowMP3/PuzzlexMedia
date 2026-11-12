@@ -77,7 +77,9 @@ document.addEventListener('click', (ev) => {
         ? title.previousElementSibling
         : null;
       const tl = gsap.timeline({
-        scrollTrigger: { trigger: title, start: 'top 88%', once: true },
+        // plays once and stays; not `once: true`, which kills the trigger inside a refresh: opening the page at a
+        // #section (headings already passed) then broke ScrollTriggers created at the same moment
+        scrollTrigger: { trigger: title, start: 'top 88%', toggleActions: 'play none none none' },
       });
       if (kicker) tl.fromTo(kicker, { autoAlpha: 0, letterSpacing: '.8em' }, { autoAlpha: 1, letterSpacing: '.35em', duration: 0.9, ease: 'power3.out', clearProps: 'letterSpacing' }, 0);
       // the negative insets leave room for the Arabic ascenders and the underline, so only the bottom edge wipes
