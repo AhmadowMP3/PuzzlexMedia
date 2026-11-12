@@ -155,29 +155,14 @@ function drawVisual(ctx, cx, cy, size, u, vfScale = 1.25, vfAspect = 0.8) {
   ctx.restore();
 }
 
-// Icon + "PUZZLEX MEDIA" set in Agera, used instead of the logo PNG (whose wordmark is outdated).
+// The official logo (assets/logo.svg: icon + PUZZELX wordmark), `h` tall at the icon, ending at `x` (or centred on it)
 function drawBrand(ctx, x, y, h, align) {
-  ctx.save();
-  ctx.direction = 'ltr';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  const fs = h * 0.56;
-  ctx.font = `900 ${fs}px "Agera Gothic"`;
-  const w1 = ctx.measureText('PUZZLEX').width;
-  ctx.font = `400 ${fs}px "Agera Gothic"`;
-  const w2 = ctx.measureText(' MEDIA').width;
-  const gap = h * 0.32;
-  const total = h + gap + w1 + w2;
-  const left = align === 'center' ? x - total / 2 : x - total;
-  ctx.drawImage(images.icon, left, y, h, h);
-  const ty = y + h / 2 + h * 0.04;
-  ctx.font = `900 ${fs}px "Agera Gothic"`;
-  ctx.fillStyle = PAL.text;
-  ctx.fillText('PUZZLEX', left + h + gap, ty);
-  ctx.font = `400 ${fs}px "Agera Gothic"`;
-  ctx.fillStyle = LIME;
-  ctx.fillText(' MEDIA', left + h + gap + w1, ty);
-  ctx.restore();
+  const img = images.logo;
+  if (!img) return;
+  // the file's frame is a little taller than the icon tile (252 vs 244.6 units)
+  const H = h * (252 / 244.6), W = H * (960 / 252);
+  const left = align === 'center' ? x - W / 2 : x - W;
+  ctx.drawImage(img, left, y - (H - h) / 2, W, H);
 }
 
 // where a line drawn at `y` (textBaseline 'top', current font) really ends: Arabic letters hang well below the em box
@@ -986,7 +971,7 @@ function playClick() {
     document.fonts.load('400 20px "Agera Gothic"', 'MEDIA'),
     document.fonts.load('700 20px "Agera Gothic"', 'WWW'),
   ]).catch(() => {});
-  images = { icon: await loadImage(ROOT + 'assets/icon.svg') };
+  images = { icon: await loadImage(ROOT + 'assets/icon.svg'), logo: await loadImage(ROOT + 'assets/logo.svg?v=1').catch(() => null) };
   build();
   ScrollTrigger.refresh();
 

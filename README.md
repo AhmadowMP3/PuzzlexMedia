@@ -104,6 +104,19 @@ At `/admin/` the team edits the site without touching code:
   (`content/articles-seed.json`, copied once into `articles.json`).
 - **Contact & links**: phone, WhatsApp, email, website and social links (empty = left off the site: no "coming soon", no dead icon).
 - **Messages**: the contact-form inbox, with read / unread and delete.
+- **Team** («الفريق»): "Meet our team" on the About page: photo, name, role, bio and social links per person, in both
+  languages. One switch shows or hides the whole section (it starts hidden); it only shows with at least one person.
+- **Company profile** («الملف التعريفي»): the Arabic and English PDFs (up to 80 MB; export for the web, under 20 MB is
+  best). They open in the browser from the About page's "Company profile" block and a footer link; with neither
+  uploaded, both are left off the site.
+- **Job applications** («طلبات التوظيف»): what's sent from `/careers.html` («انضم لفريقنا»): name, WhatsApp, email,
+  field, experience, portfolio link, a note and an optional PDF CV (5 MB). The CVs live in `/data/applications/`,
+  never public; the panel downloads them. 3 applications per visitor per hour.
+- **Newsletter** («النشرة البريدية»): the sign-ups from the "Stay in the loop" box above every footer
+  (`/data/subscribers.json`, no duplicates, 5 tries per visitor per 10 minutes), with search, remove and an
+  Excel-ready CSV export. The site collects the list; sending the newsletter itself happens outside it.
+
+All of this is in `lib/company.js` (server) and `admin/company.js` (panel).
 
 On every page: a round WhatsApp button bottom-left (once a number is set) that says hello in a bubble once per visit, and
 a back-to-top jigsaw piece bottom-right whose outline draws itself as you read and turns lime at the end of the page.

@@ -930,6 +930,7 @@ function initContact() {
   const dial = form.querySelector('#f-dial');
   dial.innerHTML = PhoneNumber.COUNTRIES.map(([code, ar, en], k) => `<option value="${code}"${k ? '' : ' selected'}>\u200E+${code}\u200E ${T(ar, en)}</option>`).join('')
     + `<option value="">${T('دولة أخرى: اكتب الرمز مع الرقم', 'Other: type the code with the number')}</option>`;
+  initDialPicker(dial);
   const whatsappNumber = () => PhoneNumber.normalize(fields.phone.el.value, dial.value);
   const fields = {
     name: { el: form.querySelector('#f-name'), err: form.querySelector('#e-name'), check: (v) => (v.trim().length < 2 ? T('اكتب اسمك من فضلك.', 'Please enter your name.') : '') },
@@ -1008,7 +1009,8 @@ function initContact() {
   const done = form.querySelector('.form-done');
   const fallback = form.querySelector('.send-fallback');
   const body = [...form.children].filter((el) => el !== done && el !== fallback);
-  done.querySelector('.done-piece').innerHTML = `<path d="${jigsawD({ t: 1, r: -1, b: 1, l: -1 }, 100, 100)}"/><path class="tick" d="M28 52l15 15 30-32"/>`;
+  // tabs on every side, so the body is solid where the tick is (cut-ins used to swallow its ends)
+  done.querySelector('.done-piece').innerHTML = `<path d="${jigsawD({ t: 1, r: 1, b: 1, l: 1 }, 100, 100)}"/><path class="tick" d="M27 51l16 16 31-33"/>`;
 
   const celebrate = () => {
     const h = form.offsetHeight;
@@ -1441,6 +1443,247 @@ function initFeedbackViewer() {
   });
 }
 
+/* ---------- Contact · the country code as a searchable list with flags ----------
+   A native <select> can't show pictures (and Windows draws flag emoji as two letters), so the select stays in the
+   form, hidden, and this button + list drive it: pick or type a country's name or code. */
+const DIAL_FLAGS = { 963: 'sy', 971: 'ae', 966: 'sa', 974: 'qa', 965: 'kw', 973: 'bh', 968: 'om', 962: 'jo', 961: 'lb', 964: 'iq', 970: 'ps', 20: 'eg', 967: 'ye', 90: 'tr', 49: 'de', 44: 'gb', 1: 'us' };
+
+function initDialPicker(select) {
+  const flag = (code) => (DIAL_FLAGS[code]
+    ? `<img class="dial-flag" src="${ROOT}assets/flags/${DIAL_FLAGS[code]}.svg" alt="" width="24" height="18" loading="lazy">`
+    : '<span class="dial-flag dial-flag--any" aria-hidden="true">+</span>');
+  const options = [...select.options].map((o) => ({ value: o.value, label: o.textContent.replace(/‎/g, '').replace(/^\+\d+\s*/, '').trim() }));
+  const wrap = select.parentElement;
+  select.classList.add('dial-native');
+  select.tabIndex = -1;
+  select.setAttribute('aria-hidden', 'true');
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dial-btn';
+  btn.setAttribute('aria-haspopup', 'listbox');
+  btn.setAttribute('aria-expanded', 'false');
+  const pop = document.createElement('div');
+  pop.className = 'dial-pop';
+  pop.hidden = true;
+  pop.innerHTML = `<input class="dial-search" type="search" autocomplete="off" spellcheck="false" placeholder="${T('ابحث عن دولة أو رمز', 'Search a country or code')}" aria-label="${T('ابحث عن دولة', 'Search a country')}" role="combobox" aria-expanded="true" aria-controls="dial-list" aria-autocomplete="list">`
+    + `<ul class="dial-list" id="dial-list" role="listbox" aria-label="${T('رمز الدولة', 'Country code')}"></ul>`;
+  wrap.insertBefore(btn, select);
+  wrap.append(pop);
+  const search = pop.querySelector('.dial-search');
+  const list = pop.querySelector('.dial-list');
+
+  const paint = () => {
+    const o = options.find((x) => x.value === select.value) || options[0];
+    btn.innerHTML = `${flag(o.value)}<span class="dial-code" dir="ltr">${o.value ? `+${o.value}` : '+…'}</span><span class="dial-caret" aria-hidden="true"></span>`;
+    btn.setAttribute('aria-label', `${T('رمز الدولة', 'Country code')}: ${o.label}${o.value ? ` +${o.value}` : ''}`);
+  };
+  let shown = [], active = 0;
+  // Arabic letters with and without hamza / ta marbuta match each other; digits match the code
+  const fold = (s) => s.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\p{L}\p{N}]+/gu, ' ');
+  const draw = () => {
+    const q = fold(search.value.trim()).replace(/^\+/, '');
+    shown = options.filter((o) => !q || fold(o.label).includes(q) || (o.value && o.value.startsWith(q.replace(/\D/g, '') || '§')));
+    active = Math.max(0, shown.findIndex((o) => o.value === select.value));
+    list.innerHTML = shown.length
+      ? shown.map((o, k) => `<li role="option" id="dial-opt-${k}" data-k="${k}" aria-selected="${o.value === select.value}">${flag(o.value)}<span class="dial-name">${o.label}</span><span class="dial-num" dir="ltr">${o.value ? `+${o.value}` : ''}</span></li>`).join('')
+      : `<li class="dial-none" role="presentation">${T('لا توجد دولة بهذا الاسم', 'No country by that name')}</li>`;
+    mark();
+  };
+  const mark = () => {
+    list.querySelectorAll('[role="option"]').forEach((li, k) => li.classList.toggle('is-active', k === active));
+    const cur = list.querySelector(`#dial-opt-${active}`);
+    if (cur) { search.setAttribute('aria-activedescendant', cur.id); cur.scrollIntoView({ block: 'nearest' }); }
+    else search.removeAttribute('aria-activedescendant');
+  };
+  // the form's rows are animated in, and an animated row stacks on its own: lift this one while the list is open,
+  // or the next row paints over the list
+  const row = wrap.closest('.form-row') || wrap.closest('.field');
+  const open = () => {
+    if (row) { row.style.position = 'relative'; row.style.zIndex = '40'; }
+    pop.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    search.value = '';
+    draw();
+    search.focus({ preventScroll: true });
+  };
+  const close = (refocus) => {
+    if (pop.hidden) return;
+    pop.hidden = true;
+    if (row) { row.style.zIndex = ''; row.style.position = ''; }
+    btn.setAttribute('aria-expanded', 'false');
+    if (refocus) btn.focus({ preventScroll: true });
+  };
+  const choose = (o) => {
+    if (!o) return;
+    select.value = o.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    paint();
+    close(true);
+  };
+
+  btn.addEventListener('click', () => (pop.hidden ? open() : close(true)));
+  search.addEventListener('input', draw);
+  search.addEventListener('keydown', (ev) => {
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      if (shown.length) { active = (active + (ev.key === 'ArrowDown' ? 1 : -1) + shown.length) % shown.length; mark(); }
+    } else if (ev.key === 'Enter') { ev.preventDefault(); choose(shown[active]); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); close(true); }
+    else if (ev.key === 'Tab') close(false);
+  });
+  // pointerdown, not click: picking an option mustn't blur the search first and close the list under the finger
+  list.addEventListener('pointerdown', (ev) => {
+    const li = ev.target.closest('[role="option"]');
+    if (!li) return;
+    ev.preventDefault();
+    choose(shown[Number(li.dataset.k)]);
+  });
+  document.addEventListener('pointerdown', (ev) => { if (!pop.hidden && !wrap.contains(ev.target)) close(false); });
+  // the form's reset ("send another message") puts the select back on its first country
+  select.form?.addEventListener('reset', () => setTimeout(paint));
+  paint();
+}
+
+/* ---------- Careers · the job application (careers.html → POST /api/apply, lib/company.js) ---------- */
+function initCareers() {
+  const form = document.querySelector('.careers-form');
+  if (!form || typeof PhoneNumber === 'undefined') return;
+  const $f = (s) => form.querySelector(s);
+  const dial = $f('#c-dial');
+  dial.innerHTML = PhoneNumber.COUNTRIES.map(([code, ar, en], k) => `<option value="${code}"${k ? '' : ' selected'}>‎+${code}‎ ${T(ar, en)}</option>`).join('')
+    + `<option value="">${T('دولة أخرى: اكتب الرمز مع الرقم', 'Other: type the code with the number')}</option>`;
+  initDialPicker(dial);
+
+  const cvInput = $f('#c-cv'), cvName = $f('.cv-name'), cvHint = cvName.textContent;
+  const CV_MAX = 5 * 1024 * 1024;
+  const cvProblem = () => {
+    const f = cvInput.files[0];
+    if (!f) return '';
+    if (!/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') return T('السيرة الذاتية بصيغة PDF فقط.', 'The CV must be a PDF.');
+    if (f.size > CV_MAX) return T('الملف أكبر من 5 ميغابايت.', 'The file is larger than 5 MB.');
+    return '';
+  };
+  const checks = {
+    name: ['#c-name', '#ce-name', (v) => (v.trim().length < 2 ? T('اكتب اسمك من فضلك.', 'Please enter your name.') : '')],
+    email: ['#c-email', '#ce-email', (v) => (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? T('اكتب بريداً إلكترونياً صحيحاً.', 'Please enter a valid email.') : '')],
+    phone: ['#c-phone', '#ce-phone', (v) => (!v.trim() ? T('نحتاج رقم واتساب للتواصل معك.', 'We need a WhatsApp number to reach you.') : !PhoneNumber.normalize(v, dial.value) ? T('رقم واتساب غير صحيح. تأكد من رمز الدولة ومن عدد الأرقام.', 'That WhatsApp number isn’t valid. Check the country code and the number of digits.') : '')],
+    field: ['#c-field', '#ce-field', (v) => (!v ? T('اختر مجالك.', 'Choose your field.') : '')],
+    portfolio: ['#c-portfolio', '#ce-portfolio', (v) => (v.trim() && !/^https?:\/\/\S+\.\S+/i.test(v.trim()) ? T('الرابط يبدأ بـ https://', 'The link starts with https://') : '')],
+    about: ['#c-about', '#ce-about', (v) => (v.trim().length < 10 ? T('أخبرنا بجملة أو جملتين عنك.', 'Tell us a sentence or two about yourself.') : '')],
+  };
+  const show = (el, errEl, msg) => {
+    errEl.textContent = msg;
+    el.setAttribute('aria-invalid', String(!!msg));
+    el.closest('.field').classList.toggle('has-error', !!msg);
+  };
+  const run = (k) => { const [s, e, fn] = checks[k]; const el = $f(s); const msg = fn(el.value); show(el, $f(e), msg); return msg ? el : null; };
+  Object.keys(checks).forEach((k) => {
+    const el = $f(checks[k][0]);
+    el.addEventListener('blur', () => { el.dataset.touched = '1'; run(k); });
+    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => { if (el.dataset.touched) run(k); });
+  });
+  dial.addEventListener('change', () => { if ($f('#c-phone').dataset.touched) run('phone'); });
+  cvInput.addEventListener('change', () => {
+    const f = cvInput.files[0];
+    cvName.textContent = f ? f.name : cvHint;
+    form.querySelector('.cv-drop').classList.toggle('has-file', !!f);
+    show(cvInput, $f('#ce-cv'), cvProblem());
+  });
+
+  const done = $f('.form-done');
+  const body = [...form.children].filter((el) => el !== done);
+  done.querySelector('.done-piece').innerHTML = `<path d="${jigsawD({ t: 1, r: 1, b: 1, l: 1 }, 100, 100)}"/><path class="tick" d="M27 51l16 16 31-33"/>`;
+  const submit = $f('.form-submit'), formError = $f('.form-error');
+  let sending = false;
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (sending) return;
+    formError.textContent = '';
+    let firstBad = null;
+    Object.keys(checks).forEach((k) => { $f(checks[k][0]).dataset.touched = '1'; const bad = run(k); if (bad && !firstBad) firstBad = bad; });
+    const cvMsg = cvProblem();
+    show(cvInput, $f('#ce-cv'), cvMsg);
+    if (cvMsg && !firstBad) firstBad = cvInput;
+    if (firstBad) {
+      firstBad.focus({ preventScroll: true });
+      firstBad.closest('.field').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
+      return;
+    }
+    const data = new FormData(form);
+    data.set('lang', EN ? 'en' : 'ar');
+    if (!cvInput.files[0]) data.delete('cv');
+    sending = true;
+    submit.disabled = true;
+    submit.setAttribute('aria-busy', 'true');
+    try {
+      const res = await fetch('/api/apply', { method: 'POST', body: data });
+      const r = await res.json().catch(() => ({}));
+      if (!res.ok || !r.ok) throw new Error(r.error || String(res.status));
+      done.querySelector('.done-name').textContent = $f('#c-name').value.trim().split(/\s+/)[0];
+      body.forEach((el) => { el.hidden = true; });
+      done.hidden = false;
+      playClick();
+      done.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'center' });
+      if (!REDUCED) gsap.from(done.querySelector('.done-piece'), { y: -160, rotation: -200, scale: 0.4, duration: 0.9, ease: 'bounce.out' });
+    } catch (err) {
+      formError.textContent = err.message === 'rate'
+        ? T('أرسلت عدة طلبات خلال وقت قصير. حاول مرة أخرى لاحقاً.', 'You’ve sent several applications in a short time. Please try again later.')
+        : err.message === 'cv' ? T('تعذّر قبول السيرة الذاتية: أرسلها بصيغة PDF وحجم أقل من 5 ميغابايت.', 'The CV couldn’t be accepted: send a PDF under 5 MB.')
+          : err.message === '413' || err.message === 'size' ? T('الملف أكبر من المسموح (5 ميغابايت).', 'The file is larger than allowed (5 MB).')
+            : T('تعذّر إرسال طلبك الآن. حاول مرة أخرى بعد قليل.', 'We couldn’t send your application just now. Please try again shortly.');
+    } finally {
+      sending = false;
+      submit.disabled = false;
+      submit.removeAttribute('aria-busy');
+    }
+  });
+  done.querySelector('.done-again').addEventListener('click', () => {
+    form.reset();
+    cvName.textContent = cvHint;
+    form.querySelector('.cv-drop').classList.remove('has-file');
+    Object.keys(checks).forEach((k) => { const el = $f(checks[k][0]); delete el.dataset.touched; show(el, $f(checks[k][1]), ''); });
+    done.hidden = true;
+    body.forEach((el) => { el.hidden = false; });
+    $f('#c-name').focus();
+  });
+}
+
+/* ---------- every page · the newsletter sign-up above the footer (POST /api/subscribe, lib/company.js) ---------- */
+function initNewsletter() {
+  document.querySelectorAll('.nl-form').forEach((form) => {
+    const email = form.querySelector('[name="email"]'), status = form.querySelector('.nl-status'), btn = form.querySelector('.nl-submit');
+    const say = (msg, bad) => { status.textContent = msg; status.classList.toggle('is-bad', !!bad); };
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim())) {
+        email.setAttribute('aria-invalid', 'true');
+        say(T('اكتب بريداً إلكترونياً صحيحاً.', 'Please enter a valid email.'), true);
+        email.focus();
+        return;
+      }
+      email.removeAttribute('aria-invalid');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/subscribe', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.value, name: form.querySelector('[name="name"]').value, website: form.querySelector('[name="website"]').value, lang: EN ? 'en' : 'ar' }),
+        });
+        const r = await res.json().catch(() => ({}));
+        if (!res.ok || !r.ok) throw new Error(r.error || String(res.status));
+        form.reset();
+        say(T('شكراً لاشتراكك! ستصلك نشرتنا على بريدك.', 'Thanks for subscribing! Our newsletter will reach your inbox.'));
+        playClick();
+      } catch (err) {
+        say(err.message === 'rate' ? T('محاولات كثيرة — حاول بعد قليل.', 'Too many tries — please wait a little.') : T('تعذّر الاشتراك الآن. حاول مرة أخرى بعد قليل.', 'We couldn’t subscribe you just now. Please try again shortly.'), true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 /* ---------- boot ---------- */
 (async function initPages() {
   await document.fonts.ready;
@@ -1457,6 +1700,8 @@ function initFeedbackViewer() {
   initFeedback();
   initFeedbackViewer();
   initContact();
+  initCareers();
+  initNewsletter();
   initLost();
   ScrollTrigger.refresh();
 })();

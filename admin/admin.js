@@ -1567,7 +1567,7 @@ async function viewMessages(view) {
    ========================================================= */
 const STAT_PAGES = {
   '/': 'الرئيسية', '/about.html': 'من نحن', '/services.html': 'الخدمات', '/work.html': 'أعمالنا', '/feedback.html': 'آراء العملاء',
-  '/project.html': 'صفحة مشروع', '/contact.html': 'تواصل معنا', '/privacy.html': 'الخصوصية', '/404.html': 'صفحة غير موجودة',
+  '/project.html': 'صفحة مشروع', '/contact.html': 'تواصل معنا', '/careers.html': 'انضم لفريقنا', '/privacy.html': 'الخصوصية', '/404.html': 'صفحة غير موجودة',
 };
 const CLICK_KINDS = {
   whatsapp: 'واتساب', phone: 'اتصال هاتفي', email: 'بريد إلكتروني', social: 'حسابات التواصل', project: 'فتح مشروع',

@@ -26,6 +26,7 @@ const { createAnalytics } = require('./lib/analytics');
 const { createGeo } = require('./lib/geo');
 const { createInvoices } = require('./lib/invoices');
 const { articlePage, shownIn, hasLang, articleHref } = require('./lib/articles');
+const { createCompany } = require('./lib/company');
 
 const ROOT = __dirname;
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
@@ -40,6 +41,9 @@ const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 // editable content (admin panel) lives in DATA_DIR next to the messages; see lib/store.js
 const store = createStore({ dataDir: DATA_DIR, root: ROOT });
 store.seed();
+// the team, the company profile, the newsletter and job applications (lib/company.js); json / clientIp / readBody are below
+const company = createCompany({ store, json, clientIp, readBody });
+company.seed();
 store.applyReviewTranslations(path.join(ROOT, 'content', 'reviews-en.json'))
   .then((n) => n && console.log(`[content] English added to ${n} client review(s)`), (err) => console.error('[content] review translations:', err.message));
 const auth = createAuth({ store, secureCookies: () => process.env.COOKIE_SECURE !== '0' });
@@ -47,7 +51,7 @@ const auth = createAuth({ store, secureCookies: () => process.env.COOKIE_SECURE 
 const CLARITY_ID = /^[a-z0-9]{6,20}$/i.test(process.env.CLARITY_ID || '') ? process.env.CLARITY_ID : '';
 // Google Search Console: the code from its "HTML tag" verification method (only the content="…" value)
 const GOOGLE_VERIFICATION = /^[\w-]{10,100}$/.test(process.env.GOOGLE_SITE_VERIFICATION || '') ? process.env.GOOGLE_SITE_VERIFICATION : '';
-const content = createContent({ root: ROOT, store, siteUrl: SITE_URL, clarityId: CLARITY_ID, googleVerification: GOOGLE_VERIFICATION });
+const content = createContent({ root: ROOT, store, siteUrl: SITE_URL, clarityId: CLARITY_ID, googleVerification: GOOGLE_VERIFICATION, company });
 // visitor statistics for the admin panel, kept in DATA_DIR/analytics (lib/analytics.js, sent by track.js)
 const analytics = createAnalytics({ dataDir: DATA_DIR, keepDays: Number(process.env.ANALYTICS_DAYS) || 395 });
 // the visitor's country from their IP (lib/geo.js, downloads its own data); GEO=0 turns it off
@@ -161,7 +165,7 @@ async function pageEntry(file) {
 let sitemap = null; // { version, entry }
 const hasFeedback = () => store.read('testimonials.json', []).some((t) => t.visible !== false); // else the page is an empty shell
 const articles = () => store.read('articles.json', []);
-const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'privacy.html',
+const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'careers.html', 'privacy.html',
   ...store.read('projects.json', { projects: [] }).projects.map((p) => `project.html?id=${encodeURIComponent(p.id)}`)];
 // the day each project last changed in the admin panel (lib/admin.js stamps it); nothing is guessed
 const projectDates = () => new Map(store.read('projects.json', { projects: [] }).projects
@@ -481,7 +485,7 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 
-const admin = createAdmin({ store, auth, content, clientIp, json, readBody, serviceLabels: SERVICES, mail, analytics });
+const admin = createAdmin({ store, auth, content, clientIp, json, readBody, serviceLabels: SERVICES, mail, analytics, company });
 // the client's copy of an invoice / receipt / quotation: /doc/<token> (doc.html, which fetches /api/doc/<token>)
 const invoices = createInvoices({ store, readBody });
 
@@ -499,6 +503,8 @@ const server = http.createServer(async (req, res) => {
       if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return json(res, 405, { ok: false }); }
       return await handleContact(req, res);
     }
+    if (p === '/api/subscribe') return await company.subscribe(req, res);
+    if (p === '/api/apply') return await company.applyJob(req, res);
     if (p.startsWith('/api/admin/')) return await admin(req, res, p);
     // a client's invoice / receipt / quotation, for whoever has the link: never indexed, never cached by a proxy
     if (/^\/(api\/)?doc(\/|\.html$)/.test(p)) {

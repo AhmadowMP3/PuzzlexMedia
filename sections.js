@@ -416,19 +416,16 @@ function buildPopPiece(data, unit) {
 
   // back: lime, with the X mark drawn as vector
   // the back is seen mirrored, so its safe area uses the edges swapped left↔right;
-  // the mark + "PUZZLEX" block is scaled to fit inside it
+  // the official mark, centred in it
   const backSafe = safeRect({ t: data.e.t, b: data.e.b, l: data.e.r, r: data.e.l }, POP_UNIT);
-  const blk = fitInto({ w: 1, h: 1.36 }, { x: backSafe.x + backSafe.w * 0.08, y: backSafe.y + backSafe.h * 0.06, w: backSafe.w * 0.84, h: backSafe.h * 0.88 });
+  const blk = fitInto({ w: 1, h: 1 }, { x: backSafe.x + backSafe.w * 0.14, y: backSafe.y + backSafe.h * 0.14, w: backSafe.w * 0.72, h: backSafe.h * 0.72 });
   const markSize = blk.w;
-  const textSize = markSize * 0.19;
   const mark = popMark
     ? `<svg x="${blk.x.toFixed(2)}" y="${blk.y.toFixed(2)}" width="${markSize.toFixed(2)}" height="${markSize.toFixed(2)}" viewBox="${popMark.viewBox}">${popMark.inner}</svg>`
     : '';
-  const textY = blk.y + markSize * 1.12 + textSize;
   const back = popSvg('back', pad, `
     ${mirrored}<path d="${d}" fill="#d7ff00"/></g>
     ${mark}
-    <text x="${(blk.x + markSize / 2).toFixed(2)}" y="${textY.toFixed(2)}" text-anchor="middle" font-family="Agera Gothic" font-weight="900" font-size="${textSize.toFixed(2)}" fill="#0a0a0b" letter-spacing="${(textSize * 0.06).toFixed(2)}">PUZZLEX</text>
     ${mirrored}<path d="${d}" fill="none" stroke="rgba(0,0,0,.18)" stroke-width=".4"/></g>`);
   back.style.transform = `translateZ(${(-depthPx).toFixed(2)}px) rotateY(180deg)`;
   frag.appendChild(back);
