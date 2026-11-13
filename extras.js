@@ -307,6 +307,27 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
   };
   stage.addEventListener('pointerup', release);
   stage.addEventListener('pointercancel', release);
+  // a photo or logo would start the browser's own image drag (and cancel ours)
+  stage.addEventListener('dragstart', (ev) => ev.preventDefault());
+
+  // a sideways scroll turns it too: a trackpad's two-finger swipe, or Shift + the mouse wheel.
+  // An up-and-down scroll is left to the page; when the scrolling stops it settles on the nearest piece
+  let wheelEnd = 0;
+  stage.addEventListener('wheel', (ev) => {
+    const dx = ev.shiftKey && !ev.deltaX ? ev.deltaY : ev.deltaX;
+    if (!dx || Math.abs(dx) < Math.abs(ev.shiftKey ? 0 : ev.deltaY)) return;
+    ev.preventDefault();
+    ev.stopPropagation(); // keep it from Lenis, which would scroll the page
+    unflip();
+    gsap.killTweensOf(state);
+    const px = ev.deltaMode === 1 ? dx * 16 : dx; // some mice report lines, not pixels
+    state.rot -= (px / W) * STEP * 0.8; // like dragging the ring the other way
+    render();
+    clearTimeout(wheelEnd);
+    wheelEnd = setTimeout(() => {
+      gsap.to(state, { rot: Math.round(state.rot / STEP) * STEP, duration: REDUCED ? 0 : 0.6, ease: 'power3.out', overwrite: true, onUpdate: render });
+    }, 140);
+  }, { passive: false });
   // a drag isn't a click
   stage.addEventListener('click', (ev) => {
     if (moved) { ev.preventDefault(); ev.stopPropagation(); moved = false; return; }
