@@ -30,6 +30,7 @@ body {
   font-family: var(--ar);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 a { color: inherit; text-decoration: none; }
 
@@ -298,11 +299,11 @@ html.lenis, html.lenis body { height: auto; }
 .value-list { position: relative; margin-top: clamp(24px, 4vh, 48px); min-height: clamp(190px, 30vh, 260px); }
 .value {
   position: absolute; inset: 0 0 auto 0;
-  opacity: 0; transform: translateY(26px); filter: blur(6px);
-  transition: opacity .5s ease, transform .6s cubic-bezier(.2, .7, .2, 1), filter .5s ease;
+  opacity: 0; transform: translateY(26px);
+  transition: opacity .5s ease, transform .6s cubic-bezier(.2, .7, .2, 1);
   pointer-events: none;
 }
-.value.is-active { opacity: 1; transform: none; filter: none; pointer-events: auto; }
+.value.is-active { opacity: 1; transform: none; pointer-events: auto; }
 .value h3 { font-weight: 900; font-size: clamp(38px, 5.2vw, 76px); line-height: 1.1; }
 .value p { margin-top: 14px; max-width: 34ch; color: var(--muted); font-size: clamp(16px, 1.35vw, 20px); line-height: 1.9; }
 
@@ -1728,10 +1729,14 @@ html[lang="ar"] .kicker:not(.project-client) { display: none; }
   -webkit-user-select: none; user-select: none;
 }
 .tmo-stage.is-dragging { cursor: grabbing; }
+/* while the ring turns, the glow and the piece's own transitions wait: a moving filter is repainted every frame */
+.tmo-stage.is-moving .tmo-shape path { filter: none !important; transition: none; }
+.tmo-stage.is-moving .tm-orbit.is-3d .tmo-side { transition: none; }
 .tm-orbit.is-3d {
   display: block; position: absolute; left: 50%; top: 50%; width: var(--w); height: var(--h); margin: 0;
   translate: -50% -50%; transform-style: preserve-3d;
 }
+.tmo-stage.is-moving .tm-orbit.is-3d { will-change: transform; }
 .tm-orbit.is-3d .tmo { position: absolute; inset: 0; transform-style: preserve-3d; }
 .tm-orbit.is-3d .tmo.is-away { visibility: hidden; pointer-events: none; }
 .tmo-card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .75s cubic-bezier(.3, 1.25, .5, 1); }
@@ -2189,4 +2194,16 @@ html.menu-lock .wa-hello { display: none; }
 @media (max-width: 860px) {
   .profile-dl { grid-template-columns: minmax(0, 1fr); }
   .profile-mock { max-width: 300px; }
+}
+
+/* phones and touch screens: no frosted glass (backdrop-filter repaints what scrolls under it, every frame, and tears
+   on the way back up); the same bars get a denser colour instead */
+@media (hover: none), (max-width: 860px) {
+  .btn-ghost, .fb-lightbox, .pp-pop-backdrop, .topbar--page.is-scrolled, .my-puzzle, .rq-bar {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .topbar--page.is-scrolled { background: rgba(var(--ink-rgb), .95); }
+  .my-puzzle, .rq-bar { background: rgba(18, 18, 20, .97); }
+  .btn-ghost { background: rgba(var(--ink-rgb), .85); }
+  .pp-pop-backdrop { background: radial-gradient(60% 60% at 50% 50%, rgba(215, 255, 0, .10), transparent 70%), rgba(var(--ink-rgb), .94); }
 }

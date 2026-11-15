@@ -71,6 +71,11 @@ document.addEventListener('click', (ev) => {
 /* ---------- section headings rise out of a mask as they come into view ---------- */
 (function initHeadingReveals() {
   if (SCROLL_REDUCED) return;
+  const tls = [];
+  // safety net: a heading that's on screen but whose reveal never started (no scroll event yet, a page opened at
+  // #section, frames paused in a background tab) is shown as it ends, so nothing waits for a scroll to appear
+  const onScreen = (el) => { const r = el.getBoundingClientRect(); return r.top < innerHeight * 0.95 && r.bottom > 0; };
+  const rescue = () => tls.forEach(({ tl, title }) => { if (tl.progress() === 0 && !tl.isActive() && onScreen(title)) tl.progress(1); });
   const reveal = () => {
     document.querySelectorAll('.section-title').forEach((title) => {
       const kicker = title.previousElementSibling && title.previousElementSibling.classList.contains('kicker')
@@ -87,8 +92,13 @@ document.addEventListener('click', (ev) => {
         { yPercent: 55, clipPath: 'inset(100% -20% -30% -20%)' },
         { yPercent: 0, clipPath: 'inset(-30% -20% -30% -20%)', duration: 1, ease: 'expo.out', clearProps: 'clipPath,transform' },
         0.08);
+      tls.push({ tl, title });
     });
+    [400, 1500].forEach((ms) => setTimeout(rescue, ms));
   };
   // fonts change the headings' heights, so measure once they're in
   document.fonts.ready.then(reveal);
+  // and again whenever the page comes back: a tab shown again, or a page restored from the back/forward cache
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(rescue, 400); });
+  window.addEventListener('pageshow', (ev) => { if (ev.persisted) setTimeout(rescue, 400); });
 })();

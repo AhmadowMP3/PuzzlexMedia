@@ -226,23 +226,43 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
       if (!q.dataset.watched) { q.dataset.watched = '1'; q.addEventListener('scroll', more, { passive: true }); }
       more();
     });
-    render();
+    drawn = null; render();
   }
 
   // the ring's turn, and which pieces face us (the ones turned away are hidden, so their backs never show)
   const norm = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
   let frontIndex = 0;
-  function render() {
-    list.style.transform = `translateZ(${-R}px) rotateY(${state.rot}deg)`;
+  // only what changed is written: the ring's own transform every frame, a piece's fade in steps, its classes when
+  // they flip, so a turn costs one composited transform and not a restyle of every piece
+  const seen = items.map(() => ({ away: null, d: null, front: null }));
+  let drawn = null;
+  function draw() {
+    pending = 0;
+    if (drawn === state.rot) return;
+    drawn = state.rot;
+    list.style.transform = `translateZ(${-R}px) rotateY(${state.rot.toFixed(2)}deg)`;
     let best = Infinity;
+    const angles = items.map((_, i) => Math.abs(norm(i * STEP + state.rot)));
+    angles.forEach((a, i) => { if (a < best) { best = a; frontIndex = i; } });
     items.forEach((it, i) => {
-      const a = Math.abs(norm(i * STEP + state.rot));
-      it.classList.toggle('is-away', a > 100);
-      it.style.setProperty('--d', Math.min(1, a / 90).toFixed(3));
-      if (a < best) { best = a; frontIndex = i; }
+      const a = angles[i], s = seen[i];
+      const away = a > 100, d = Math.round(Math.min(1, a / 90) * 20) / 20, front = i === frontIndex;
+      if (away !== s.away) { it.classList.toggle('is-away', away); s.away = away; }
+      if (d !== s.d && !away) { it.style.setProperty('--d', d); s.d = d; }
+      if (front !== s.front) { it.classList.toggle('is-front', front); s.front = front; }
     });
-    items.forEach((it, i) => it.classList.toggle('is-front', i === frontIndex));
   }
+  // many wheel / pointer events can land in one frame: draw once per frame
+  let pending = 0;
+  const render = () => { if (!pending) pending = requestAnimationFrame(draw); };
+  // while it turns, the hover glow (a costly filter) stays off
+  let stillTimer = 0;
+  const moving = () => {
+    stage.classList.add('is-moving');
+    clearTimeout(stillTimer);
+    stillTimer = setTimeout(() => stage.classList.remove('is-moving'), 250);
+  };
+  const renderMoving = () => { moving(); render(); };
 
   const unflip = () => {
     if (!flipped) return;
@@ -253,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
   // turn the ring so piece i faces us, the short way round
   const turnTo = (i, duration = 0.9) => {
     const target = state.rot + norm(-i * STEP - state.rot);
-    return gsap.to(state, { rot: target, duration: REDUCED ? 0 : duration, ease: 'power3.inOut', overwrite: true, onUpdate: render });
+    return gsap.to(state, { rot: target, duration: REDUCED ? 0 : duration, ease: 'power3.inOut', overwrite: true, onUpdate: renderMoving });
   };
   const step = (dir) => { unflip(); turnTo(frontIndex + dir); };
 
@@ -292,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
     drag.v = (ev.clientX - drag.last) / Math.max(1, now - drag.t);
     drag.last = ev.clientX; drag.t = now;
     state.rot = drag.rot + (dx / W) * STEP;
-    render();
+    renderMoving();
   });
   const release = () => {
     if (!drag) return;
@@ -301,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
       // a flick carries on a little before settling
       const fling = gsap.utils.clamp(-2, 2, Math.round((drag.v * 220) / W));
       const target = Math.round((state.rot / STEP) + fling) * STEP;
-      gsap.to(state, { rot: target, duration: REDUCED ? 0 : 0.7, ease: 'power3.out', overwrite: true, onUpdate: render });
+      gsap.to(state, { rot: target, duration: REDUCED ? 0 : 0.7, ease: 'power3.out', overwrite: true, onUpdate: renderMoving });
     }
     drag = null;
   };
@@ -322,10 +342,10 @@ document.addEventListener('DOMContentLoaded', function initWhatsAppHello() {
     gsap.killTweensOf(state);
     const px = ev.deltaMode === 1 ? dx * 16 : dx; // some mice report lines, not pixels
     state.rot -= (px / W) * STEP * 0.8; // like dragging the ring the other way
-    render();
+    renderMoving();
     clearTimeout(wheelEnd);
     wheelEnd = setTimeout(() => {
-      gsap.to(state, { rot: Math.round(state.rot / STEP) * STEP, duration: REDUCED ? 0 : 0.6, ease: 'power3.out', overwrite: true, onUpdate: render });
+      gsap.to(state, { rot: Math.round(state.rot / STEP) * STEP, duration: REDUCED ? 0 : 0.6, ease: 'power3.out', overwrite: true, onUpdate: renderMoving });
     }, 140);
   }, { passive: false });
   // a drag isn't a click
