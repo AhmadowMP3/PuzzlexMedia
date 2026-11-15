@@ -1281,8 +1281,8 @@ function initFeedback() {
   unsnap(first);
   watch(first);
 
-  // the server draws the first reviews; "show more" and the filters fetch the rest, already filtered (/api/feedback)
-  let filter = 'all', total = Number(wall.dataset.total) || 0, request = 0;
+  // the server draws the first reviews; "show more" and the search fetch the rest, already filtered (/api/feedback)
+  let query = '', total = Number(wall.dataset.total) || 0, request = 0;
   const more = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-ghost fb-more' });
   const note = Object.assign(document.createElement('p'), { className: 'fb-more-note' });
   note.setAttribute('role', 'status');
@@ -1295,8 +1295,8 @@ function initFeedback() {
     more.textContent = `${T('عرض المزيد', 'Show more')} (${left})`;
   };
   drawMore();
-  const fetchCards = async (f, offset) => {
-    const res = await fetch(`/api/feedback?lang=${EN ? 'en' : 'ar'}&filter=${f}&offset=${offset}`);
+  const fetchCards = async (q, offset) => {
+    const res = await fetch(`/api/feedback?lang=${EN ? 'en' : 'ar'}&offset=${offset}&q=${encodeURIComponent(q)}`);
     if (!res.ok) throw new Error(res.status);
     const page = await res.json();
     const box = document.createElement('template');
@@ -1312,7 +1312,7 @@ function initFeedback() {
     more.disabled = true;
     note.textContent = '';
     try {
-      const page = await fetchCards(filter, wall.children.length);
+      const page = await fetchCards(query, wall.children.length);
       if (mine !== request) return;
       total = page.total;
       wall.append(...page.cards);
@@ -1325,25 +1325,29 @@ function initFeedback() {
     drawMore();
   });
 
-  const chips = [...document.querySelectorAll('.fb-filters .chip')];
-  const press = (f) => chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === f)));
+  // search: by a name or a word from the review, as you type (the server matches Arabic loosely: أ / ا, ة / ه …)
+  const form = document.querySelector('[data-feedback-search]');
+  const input = form && form.querySelector('input');
+  const count = form && form.querySelector('.fb-search-count');
+  const counted = (n) => (EN ? `${n} ${n === 1 ? 'review' : 'reviews'}`
+    : n === 0 ? 'لا آراء' : n === 1 ? 'رأي واحد' : n === 2 ? 'رأيان' : `${n} ${n <= 10 ? 'آراء' : 'رأياً'}`);
   const apply = async (next) => {
     const mine = ++request;
-    press(next);
     more.disabled = false;
     note.textContent = '';
     const dip = REDUCED ? null : gsap.to(wall, { autoAlpha: 0, y: 12, duration: 0.2, ease: 'power1.in', overwrite: true });
     let page;
     try { [page] = await Promise.all([fetchCards(next, 0), dip]); } catch (e) {
       if (mine !== request) return;
-      press(filter); // the wall still shows the last filter
-      if (!REDUCED) gsap.set(wall, { autoAlpha: 1, y: 0 });
+      if (!REDUCED) gsap.set(wall, { autoAlpha: 1, y: 0 }); // the wall still shows the last search
       failed();
       return;
     }
     if (mine !== request) return;
-    filter = next;
+    query = next;
     total = page.total;
+    if (count) count.textContent = !next ? counted(total) : EN ? `${counted(total)} ${total === 1 ? 'matches' : 'match'}` : `${counted(total)} تطابق بحثك`;
+    if (!total) note.textContent = T('لا يوجد رأي بهذه الكلمة. جرّب اسماً أو كلمة أخرى.', 'No review has that. Try another name or word.');
     watching.forEach((t) => t.kill());
     watching = [];
     wall.replaceChildren(...page.cards);
@@ -1357,7 +1361,12 @@ function initFeedback() {
     page.cards.slice(9).forEach((c) => revealed.add(c));
     drop(page.cards.slice(0, 9));
   };
-  chips.forEach((chip) => chip.addEventListener('click', () => apply(chip.dataset.filter)));
+  if (form) {
+    let typing = 0;
+    const run = () => { clearTimeout(typing); const q = input.value.trim(); if (q !== query) apply(q); };
+    input.addEventListener('input', () => { clearTimeout(typing); typing = setTimeout(run, 280); });
+    form.addEventListener('submit', (ev) => { ev.preventDefault(); run(); input.blur(); });
+  }
 }
 
 /* ---------- Feedback · the images clients shared, full screen (home page and feedback page) ---------- */

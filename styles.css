@@ -1718,80 +1718,20 @@ html[lang="ar"] .kicker:not(.project-client) { display: none; }
 
 /* ---------- home · client feedback: a ring of interlocking pieces (extras.js) ---------- */
 /* without scripts (or with fewer than three reviews): a plain grid showing both sides */
-.tm-orbit { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 18px; margin-top: clamp(36px, 6vh, 64px); }
-.tm-orbit:not(.is-3d) .tmo-side { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; padding: 24px; border: 1px solid var(--line); border-radius: 22px; background: var(--ink-2); color: var(--text); font: inherit; text-align: center; }
-.tm-orbit:not(.is-3d) .tmo-back { margin-top: 8px; align-items: stretch; text-align: start; }
-.tm-orbit:not(.is-3d) .tmo-hint { display: none; }
 
-.tmo-stage {
-  position: relative; height: calc(var(--h) + 2 * var(--pad) + 70px); margin-top: clamp(28px, 5vh, 52px);
-  perspective: 1400px; perspective-origin: 50% 45%; overflow: clip; touch-action: pan-y; cursor: grab;
-  -webkit-user-select: none; user-select: none;
-}
-.tmo-stage.is-dragging { cursor: grabbing; }
 /* while the ring turns, the glow and the piece's own transitions wait: a moving filter is repainted every frame */
-.tmo-stage.is-moving .tmo-shape path { filter: none !important; transition: none; }
-.tmo-stage.is-moving .tm-orbit.is-3d .tmo-side { transition: none; }
-.tm-orbit.is-3d {
-  display: block; position: absolute; left: 50%; top: 50%; width: var(--w); height: var(--h); margin: 0;
-  translate: -50% -50%; transform-style: preserve-3d;
-}
-.tmo-stage.is-moving .tm-orbit.is-3d { will-change: transform; }
-.tm-orbit.is-3d .tmo { position: absolute; inset: 0; transform-style: preserve-3d; }
-.tm-orbit.is-3d .tmo.is-away { visibility: hidden; pointer-events: none; }
-.tmo-card { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .75s cubic-bezier(.3, 1.25, .5, 1); }
-.tmo.is-flipped .tmo-card { transform: rotateY(180deg); }
 
-.tm-orbit.is-3d .tmo-side {
-  position: absolute; inset: 0; isolation: isolate; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; padding-block: 24px; margin: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: center;
-  backface-visibility: hidden; -webkit-backface-visibility: hidden; cursor: pointer;
-  /* pieces further round the ring fade back */
-  opacity: calc(1 - var(--d, 0) * .45);
-}
-.tm-orbit.is-3d .tmo-back { transform: rotateY(180deg); justify-content: space-between; gap: 12px; padding-block: 22px 18px; }
-.tmo-side:focus-visible { outline: none; }
 
 /* the piece itself: drawn behind the content, with its tabs and cut-ins reaching past the box */
-.tmo-shape { position: absolute; z-index: -1; left: calc(-1 * var(--pad)); top: calc(-1 * var(--pad)); width: calc(100% + 2 * var(--pad)); height: calc(100% + 2 * var(--pad)); overflow: visible; pointer-events: none; }
-.tmo-shape path { fill: #161618; stroke: rgba(255, 255, 255, .13); stroke-width: 1.5; stroke-linejoin: round; transition: stroke .3s ease, filter .3s ease, fill .3s ease; }
-.tmo-back .tmo-shape path { fill: #111113; stroke: rgba(215, 255, 0, .35); }
 /* the piece under the pointer (or the keyboard) lights up along its edges */
-.tmo:hover .tmo-shape path, .tmo-side:focus-visible .tmo-shape path {
-  stroke: var(--lime); stroke-width: 2.5;
-  filter: drop-shadow(0 0 5px rgba(215, 255, 0, .8)) drop-shadow(0 0 16px rgba(215, 255, 0, .35));
-}
 
 /* front: who, and how many stars */
-.tmo-face { width: 88px; height: 88px; flex: none; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px #161618, 0 0 0 5px rgba(215, 255, 0, .55); }
-img.tmo-face.logo { object-fit: contain; padding: 10px; background: #fff; }
-span.tmo-face { display: grid; place-items: center; background: var(--lime); color: #0a0a0b; font-weight: 900; font-size: 34px; }
-.tmo-name { font-weight: 800; font-size: clamp(16px, 1.25vw, 19px); line-height: 1.45; max-width: 100%; overflow-wrap: anywhere; }
-.tmo .tm-stars svg { width: 18px; height: 18px; }
-.tmo-hint { margin-top: 2px; font-size: 12px; color: var(--muted); transition: color .3s ease; }
-.tmo:hover .tmo-hint { color: var(--accent-text); }
 
 /* back: what they said */
-.tmo-quote { flex: 1 1 auto; min-height: 0; width: 100%; overflow-y: auto; font-size: clamp(13.5px, 1vw, 15px); line-height: 1.9; text-align: start; scrollbar-width: none; overscroll-behavior: contain; }
-.tmo-quote::-webkit-scrollbar { display: none; }
 /* a review longer than the piece still scrolls (wheel, finger): no bar, the last line fades until the end is reached */
-.tmo-quote.has-more { -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
-.tmo-quote::before { font-size: 46px; line-height: .6; }
-.tmo-meta { display: flex; flex-direction: column; gap: 2px; width: 100%; padding-top: 12px; border-top: 1px solid var(--line); text-align: start; font-size: 13px; }
-.tmo-meta b { font-weight: 800; font-size: 14px; }
-.tmo-meta small { color: var(--muted); font-size: 12.5px; }
 
 /* the arrows, at the start of the section's footer */
-.tmo-nav { display: flex; gap: 10px; }
-.tmo-nav button {
-  width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--text);
-  font: 800 18px/1 var(--lat); cursor: pointer; transition: border-color .25s ease, color .25s ease, transform .25s ease;
-}
-.tmo-nav button:hover { border-color: var(--lime); color: var(--accent-text); }
-.tmo-nav button:active { transform: scale(.92); }
-.tmo-nav button:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 
-@media (prefers-reduced-motion: reduce) { .tmo-card { transition-duration: .01s; } }
 /* phones: the cards slide sideways, one and a bit on screen, instead of a long column */
 @media (max-width: 760px) {
   .testimonials .tm-list {
@@ -2207,3 +2147,116 @@ html.menu-lock .wa-hello { display: none; }
   .btn-ghost { background: rgba(var(--ink-rgb), .85); }
   .pp-pop-backdrop { background: radial-gradient(60% 60% at 50% 50%, rgba(215, 255, 0, .10), transparent 70%), rgba(var(--ink-rgb), .94); }
 }
+
+/* =========================================================
+   Feedback page: rivers of puzzle pieces (extras.js), and the search above the wall (pages.js)
+   ========================================================= */
+.fb-rivers { position: relative; padding-block: clamp(10px, 3vh, 30px) clamp(30px, 6vh, 60px); overflow: clip; }
+/* without scripts, the pieces are a plain row that scrolls sideways */
+.fb-rivers:not(.is-ready) .fbr-list { list-style: none; display: flex; gap: 14px; overflow-x: auto; padding: 0 clamp(16px, 6vw, 96px); }
+.fb-rivers:not(.is-ready) .fbr { flex: 0 0 280px; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: #161618; }
+/* the edges fade into the page, as if the rivers come from off screen */
+.fbr-rows {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(14px, 2.2vh, 22px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.fbr-row { direction: ltr; padding-block: var(--pad); margin-block: calc(-1 * var(--pad) + 4px); }
+/* the row runs left to right; each piece still reads in the page's own direction */
+html[lang="ar"] .fbr { direction: rtl; }
+/* left to right whatever the language, so the seams and the loop are the same on both pages */
+.fbr-track {
+  list-style: none; display: flex; width: max-content; direction: ltr;
+  animation: fbr-slide var(--dur, 60s) linear infinite;
+}
+.fbr-row.is-rev .fbr-track { animation-direction: reverse; }
+@keyframes fbr-slide { to { transform: translate3d(var(--shift), 0, 0); } }
+/* a row stops under the pointer, everything stops off screen and while a piece is open */
+.fbr-row:hover .fbr-track, .fb-rivers.is-off .fbr-track, .fb-rivers.is-paused .fbr-track { animation-play-state: paused; }
+.fbr-row:hover .fbr-track { will-change: auto; }
+
+.fbr {
+  position: relative; flex: none; width: var(--w); height: var(--h); isolation: isolate; cursor: pointer;
+  display: flex; flex-direction: column; gap: 8px; padding-block: 18px; color: var(--text);
+}
+.fbr.is-cuts { padding-inline: var(--cut); }
+.fbr.is-tabs { padding-inline: var(--plain); }
+.fbr-shape {
+  position: absolute; z-index: -1; left: calc(-1 * var(--pad)); top: calc(-1 * var(--pad));
+  width: calc(100% + 2 * var(--pad)); height: calc(100% + 2 * var(--pad)); overflow: visible; pointer-events: none;
+}
+.fbr-shape path { fill: #161618; stroke: rgba(255, 255, 255, .12); stroke-width: 1.5; stroke-linejoin: round; transition: stroke .25s ease, fill .25s ease; }
+.fbr.is-tabs .fbr-shape path { fill: #1b1b1e; }
+.fbr.is-lime .fbr-shape path { fill: var(--lime); stroke: var(--lime); }
+.fbr.is-lime { color: #0a0a0b; }
+.fbr.is-lime .tm-face { background: #0a0a0b; color: var(--lime); }
+.fbr.is-lime .tm-stars svg.on { fill: #0a0a0b; }
+.fbr.is-lime .fbr-quote, .fbr.is-lime .fbr-role { color: rgba(10, 10, 11, .78); }
+/* the piece under the pointer lifts and lights up along its edges (its row has stopped, so the glow costs nothing) */
+.fbr:hover { z-index: 2; }
+.fbr:hover .fbr-shape path { stroke: var(--lime); stroke-width: 2.5; filter: drop-shadow(0 0 6px rgba(215, 255, 0, .7)); }
+.fbr.is-lime:hover .fbr-shape path { stroke: #fff; }
+
+.fbr-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fbr .tm-face { width: 40px; height: 40px; font-size: 17px; flex: none; }
+.fbr-who { display: grid; gap: 3px; min-width: 0; }
+.fbr-who b { font-weight: 800; font-size: 15px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fbr .tm-stars svg { width: 13px; height: 13px; }
+.fbr-role { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fbr-quote {
+  font-size: 14px; line-height: 1.75; color: rgba(var(--fg-rgb), .82);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+}
+[dir="rtl"] .fbr-quote { text-align: right; }
+@media (max-width: 700px) { .fbr-quote { font-size: 13px; -webkit-line-clamp: 3; } .fbr-who b { font-size: 14px; } }
+@media (prefers-reduced-motion: reduce) {
+  .fbr-track { animation: none; }
+  .fbr-row { overflow-x: auto; scrollbar-width: none; }
+}
+
+/* the open piece: large, a tab on top and on one side */
+.fbr-view { margin: auto; padding: 0; border: 0; background: none; color: var(--text); overflow: visible; max-width: none; max-height: none; }
+.fbr-view::backdrop { background: rgba(var(--ink-rgb), .86); }
+.fbr-big { position: relative; isolation: isolate; width: min(88vw, 600px); aspect-ratio: 600 / 360; }
+.fbr-big .fbr-shape { left: -6.33%; top: -10.56%; width: 112.67%; height: 121.11%; } /* the viewBox's pad, 38 of 600 × 360 */
+.fbr-big .fbr-shape path { fill: #161618; stroke: var(--lime); stroke-width: 2; filter: drop-shadow(0 0 18px rgba(215, 255, 0, .25)); }
+.fbr-big.is-lime .fbr-shape path { fill: var(--lime); }
+.fbr-big.is-lime { color: #0a0a0b; }
+.fbr-big-body {
+  position: absolute; inset: 0; display: flex; flex-direction: column; gap: 12px;
+  padding: clamp(20px, 4vw, 34px) clamp(46px, 9vw, 70px) clamp(40px, 8vw, 58px) clamp(22px, 4vw, 36px); overflow-y: auto; scrollbar-width: none;
+}
+.fbr-big .tm-face { width: 56px; height: 56px; font-size: 24px; }
+.fbr-big .fbr-who b { font-size: clamp(17px, 2.4vw, 22px); white-space: normal; }
+.fbr-big .tm-stars svg { width: 18px; height: 18px; }
+.fbr-big .fbr-quote { -webkit-line-clamp: unset; display: block; font-size: clamp(15px, 2.2vw, 19px); line-height: 1.9; }
+.fbr-big.is-lime .fbr-quote { color: rgba(10, 10, 11, .85); }
+.fbr-big.is-lime .tm-face { background: #0a0a0b; color: var(--lime); }
+.fbr-close {
+  position: absolute; top: -14px; inset-inline-end: -14px; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--lime); background: #0a0a0b; color: var(--lime); font: 700 22px/1 var(--lat); cursor: pointer;
+}
+.fbr-close:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+
+/* the search above the wall */
+.fb-search { display: grid; grid-template-columns: minmax(0, 520px) auto; align-items: center; gap: 8px 18px; margin-bottom: clamp(22px, 4vh, 36px); }
+.fb-search-label { grid-column: 1 / -1; font-weight: 800; font-size: clamp(18px, 1.6vw, 22px); }
+.fb-search-box { position: relative; display: block; }
+.fb-search-box svg { position: absolute; top: 50%; inset-inline-start: 18px; width: 20px; height: 20px; translate: 0 -50%; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+.fb-search-box input {
+  width: 100%; min-height: 54px; padding-inline: 50px 18px; border-radius: 999px; border: 1px solid var(--line);
+  background: rgba(var(--fg-rgb), .05); color: var(--text); font: 500 16px var(--ar); user-select: text; -webkit-user-select: text;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+[dir="ltr"] .fb-search-box input { font-family: var(--lat); }
+.fb-search-box input::placeholder { color: var(--muted); }
+.fb-search-box input:focus { outline: none; border-color: var(--lime); background: rgba(var(--fg-rgb), .07); }
+.fb-search-box:focus-within svg { stroke: var(--accent-text); }
+.fb-search-count { color: var(--muted); font-size: 14px; font-weight: 600; }
+@media (max-width: 700px) { .fb-search { grid-template-columns: minmax(0, 1fr); } }
+
+/* home: the reviews' rivers run the full width of the screen, under the section's heading */
+.tm-rivers { margin-inline: calc(50% - 50vw); margin-top: clamp(26px, 5vh, 50px); padding-bottom: clamp(18px, 4vh, 36px); }
+/* the team page: the hero already opens it, so no rule above the grid */
+.team--page { border-top: 0; padding-top: clamp(10px, 3vh, 30px); }
+.team-join { display: flex; flex-wrap: wrap; gap: 12px; }

@@ -165,7 +165,7 @@ async function pageEntry(file) {
 let sitemap = null; // { version, entry }
 const hasFeedback = () => store.read('testimonials.json', []).some((t) => t.visible !== false); // else the page is an empty shell
 const articles = () => store.read('articles.json', []);
-const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'careers.html', 'privacy.html',
+const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'careers.html', ...(company.teamShown() ? ['team.html'] : []), 'privacy.html',
   ...store.read('projects.json', { projects: [] }).projects.map((p) => `project.html?id=${encodeURIComponent(p.id)}`)];
 // the day each project last changed in the admin panel (lib/admin.js stamps it); nothing is guessed
 const projectDates = () => new Map(store.read('projects.json', { projects: [] }).projects
@@ -432,7 +432,7 @@ function handleFeedback(req, res, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.setHeader('Allow', 'GET, HEAD'); return json(res, 405, { ok: false }); }
   const lang = url.searchParams.get('lang') === 'en' ? 'en' : 'ar';
   const offset = Math.max(0, parseInt(url.searchParams.get('offset'), 10) || 0);
-  json(res, 200, { ok: true, ...feedbackSlice(store.read('testimonials.json', []), lang, url.searchParams.get('filter'), offset) });
+  json(res, 200, { ok: true, ...feedbackSlice(store.read('testimonials.json', []), lang, url.searchParams.get('filter'), offset, String(url.searchParams.get('q') || '').slice(0, 80)) });
 }
 
 /* ---------- CSP reports: what the policy blocked (or would block, when Report-Only), written to the log ---------- */
@@ -581,6 +581,8 @@ const server = http.createServer(async (req, res) => {
       const html = articlePage(entry.body.toString('utf8'), a, lang, list, { seo: content.seo, siteUrl: SITE_URL, settings: store.read('settings.json', {}) });
       return send(req, res, 200, makeEntry(Buffer.from(html), '.html'), ext, { 'Cache-Control': 'no-cache' });
     }
+    // the team page exists only while the team is shown (admin panel → Team); otherwise it's a real 404
+    if (path.basename(file) === 'team.html' && !company.teamShown()) return await notFound(req, res, p);
     if (path.basename(file) === 'project.html') {
       // no such project: a real 404, so search engines don't keep an empty shell under every mistyped id
       const html = projectPage(entry.body.toString('utf8'), url.searchParams.get('id'), file.includes(`${path.sep}en${path.sep}`));
