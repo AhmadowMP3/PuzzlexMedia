@@ -1548,11 +1548,16 @@ html[lang="ar"] .kicker:not(.project-client) { display: none; }
 }
 
 @media (max-width: 760px) {
-  .values-stage { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-content: center; gap: 2vh; padding-top: 76px; }
+  /* the star and the text sit together in the middle of what's left under the floating header (about 90px),
+     so the top label is never under the bar and the bottom of the screen isn't left empty */
+  .values-stage {
+    grid-template-columns: 1fr; grid-template-rows: auto auto; align-content: center; gap: 1.5vh;
+    padding-top: calc(96px + 1.2em); padding-bottom: 24px;
+  }
   .values-visual { order: -1; }
-  .orbit { width: min(66vw, 38vh); }
-  .values-visual { margin-bottom: 14px; } /* the bottom label hangs below the orbit: keep it off the kicker */
-  .value-list { min-height: 200px; margin-top: 16px; }
+  .orbit { width: min(62vw, 34vh); }
+  .values-visual { margin-bottom: 18px; } /* the bottom label hangs below the orbit: keep it off the title */
+  .value-list { min-height: 168px; margin-top: 12px; }
   .section-title { font-size: clamp(40px, 12vw, 64px); }
   .partners-stage { grid-template-columns: 1fr; grid-template-rows: auto auto auto; align-content: center; gap: 3vh; padding-top: 72px; }
   .partners-head, .partners-head .kicker { text-align: center; }
@@ -1564,7 +1569,7 @@ html[lang="ar"] .kicker:not(.project-client) { display: none; }
   .partners-cta { grid-column: auto; justify-content: center; margin-bottom: 0; }
 }
 @media (max-width: 420px) { /* values orbit: side labels start past the star's tips, never on them */
-  .orbit { width: min(58vw, 38vh); }
+  .orbit { width: min(56vw, 34vh); }
   .orbit-label { font-size: 16px; }
   .pos-right { right: auto; left: 80%; translate: 0 -50%; }
   .pos-left { left: auto; right: 80%; translate: 0 -50%; }
@@ -1754,7 +1759,7 @@ html[lang="ar"] .kicker:not(.project-client) { display: none; }
   mask: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
 }
 .ls-rows { display: grid; gap: 14px; direction: ltr; }
-.ls-row { overflow: hidden; }
+.ls-row { overflow: hidden; padding-block: 12px; margin-block: -12px; } /* room for a tile that lifts and lights up, so its top isn't cut off */
 .ls-track { display: flex; gap: 14px; width: max-content; list-style: none; animation: ls-run var(--dur, 60s) linear infinite; }
 .ls-row.rev .ls-track { animation-direction: reverse; }
 .logo-strip:hover .ls-track { animation-play-state: paused; }
@@ -2260,3 +2265,27 @@ html[lang="ar"] .fbr { direction: rtl; }
 /* the team page: the hero already opens it, so no rule above the grid */
 .team--page { border-top: 0; padding-top: clamp(10px, 3vh, 30px); }
 .team-join { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* ---------- profile.html: a card per language (open / download), then the file itself, read in the page ---------- */
+.profile-page { padding: 10px clamp(16px, 6vw, 96px) clamp(70px, 10vh, 110px); }
+.profile-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: clamp(18px, 2.4vw, 30px); max-width: 1080px; }
+.profile-card {
+  display: grid; justify-items: center; gap: 14px; padding: clamp(22px, 3vw, 34px); text-align: center;
+  border: 1px solid var(--line); border-radius: 28px; background: var(--ink-2);
+  transition: border-color .3s ease, transform .3s ease;
+}
+.profile-card:hover { border-color: rgba(215, 255, 0, .5); transform: translateY(-4px); }
+.profile-card .profile-mock { max-width: 240px; }
+.profile-card-title { font-weight: 900; font-size: clamp(20px, 1.8vw, 26px); }
+.profile-card-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.profile-viewer {
+  margin-top: clamp(36px, 6vh, 64px); max-width: 1080px; height: min(86vh, 980px); overflow: hidden;
+  border: 1px solid rgba(215, 255, 0, .3); border-radius: 22px; background: #1d1d20;
+}
+.profile-frame { display: block; width: 100%; height: 100%; border: 0; }
+.profile-phone-note { display: none; margin-top: 18px; color: var(--muted); font-size: 14px; }
+/* phones show a PDF in a frame badly (or not at all): there, the buttons do the job */
+@media (max-width: 860px), (hover: none) {
+  .profile-viewer { display: none; }
+  .profile-phone-note { display: block; }
+}

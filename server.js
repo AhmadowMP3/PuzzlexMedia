@@ -165,7 +165,7 @@ async function pageEntry(file) {
 let sitemap = null; // { version, entry }
 const hasFeedback = () => store.read('testimonials.json', []).some((t) => t.visible !== false); // else the page is an empty shell
 const articles = () => store.read('articles.json', []);
-const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'careers.html', ...(company.teamShown() ? ['team.html'] : []), 'privacy.html',
+const sitePaths = () => ['', 'about.html', 'services.html', 'work.html', ...(hasFeedback() ? ['feedback.html'] : []), 'blog.html', 'contact.html', 'careers.html', ...(company.teamShown() ? ['team.html'] : []), ...(company.profileShown() ? ['profile.html'] : []), 'privacy.html',
   ...store.read('projects.json', { projects: [] }).projects.map((p) => `project.html?id=${encodeURIComponent(p.id)}`)];
 // the day each project last changed in the admin panel (lib/admin.js stamps it); nothing is guessed
 const projectDates = () => new Map(store.read('projects.json', { projects: [] }).projects
@@ -583,6 +583,8 @@ const server = http.createServer(async (req, res) => {
     }
     // the team page exists only while the team is shown (admin panel → Team); otherwise it's a real 404
     if (path.basename(file) === 'team.html' && !company.teamShown()) return await notFound(req, res, p);
+    // and the profile page only once a PDF is uploaded (admin panel → Company profile)
+    if (path.basename(file) === 'profile.html' && !company.profileShown()) return await notFound(req, res, p);
     if (path.basename(file) === 'project.html') {
       // no such project: a real 404, so search engines don't keep an empty shell under every mistyped id
       const html = projectPage(entry.body.toString('utf8'), url.searchParams.get('id'), file.includes(`${path.sep}en${path.sep}`));
