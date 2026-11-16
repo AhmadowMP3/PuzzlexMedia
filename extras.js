@@ -50,11 +50,12 @@
 })();
 
 /* ---------- Shater (شاطر): the site's assistant, in the corner the WhatsApp button had ----------
-   A tilted lime puzzle piece opens a small chat: Shater greets, the visitor asks (a few questions a visit, the number
-   comes from the server), the answers come from /api/assistant (lib/assistant.js → OpenRouter). While it waits, three
-   pieces lock together ("thinking"); the answer pops in and types itself out word by word. WhatsApp is the green
-   button in the chat's header. The chat lives in sessionStorage, so it follows the visitor from page to page. Without
-   scripts the plain WhatsApp button stays (the server still adds it); with them it's hidden behind Shater. */
+   A tilted lime puzzle piece; after a few seconds a small "Got a question?" pops out of it like a notification.
+   A click opens the chat out of the piece itself (it grows from the piece, the way an app opens from the Dock) and
+   Shater types his greeting. Questions: a few a visit (the number comes from the server, which counts every one sent),
+   answers from /api/assistant (lib/assistant.js → OpenRouter). While it waits three pieces lock together; the answer
+   pops in and types itself out. WhatsApp is the green round button in the header. The chat lives in sessionStorage,
+   so it follows the visitor between pages. Without scripts the plain WhatsApp button stays (the server adds it). */
 // the server adds the WhatsApp button after the page's scripts, so wait for the whole document
 document.addEventListener('DOMContentLoaded', function initShater() {
   const body = document.body;
@@ -65,9 +66,9 @@ document.addEventListener('DOMContentLoaded', function initShater() {
   const waHref = wa ? wa.href : '';
   document.documentElement.classList.add('has-shater');
 
-  const KEY = 'puzzlex-shater';
+  const KEY = 'puzzlex-shater-3'; // a new name for a new shape: older saved chats are left behind
   const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || null; } catch (e) { return null; } };
-  const st = Object.assign({ msgs: [], history: [], left: LIMIT, open: false, hello: false }, load() || {});
+  const st = Object.assign({ msgs: [], history: [], left: LIMIT, open: false, pinged: false, seen: false }, load() || {});
   st.left = Math.min(st.left, LIMIT);
   const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* private mode: this page only */ } };
 
@@ -77,23 +78,28 @@ document.addEventListener('DOMContentLoaded', function initShater() {
   const PAD = Math.ceil(100 * TAB_DEPTH + 4);
   const VB = `-6 ${-PAD - 6} ${112 + PAD} ${112 + PAD}`;
   const logo = (cls) => `<svg class="${cls}" viewBox="${VB}" aria-hidden="true"><path class="sh-piece" d="${PIECE}"/><g class="sh-star">${STAR}</g></svg>`;
-  const mini = jigsawD({ t: 1, r: 1, b: 0, l: 0 }, 100, 100);
   const WA_SVG = wa && wa.querySelector('svg') ? wa.querySelector('svg').outerHTML : '';
   const STATUS = {
-    idle: ON ? T('متصل الآن · يجاوب خلال ثوانٍ', 'Online · answers in seconds') : T('قيد التجهيز', 'Getting ready'),
+    idle: ON ? T('متصل الآن', 'Online') : T('قيد التجهيز', 'Getting ready'),
     thinking: T('عم يفكّر…', 'Thinking…'),
     typing: T('عم يكتب…', 'Typing…'),
   };
 
-  // the launcher: only the piece, tilted
+  // the launcher: only the piece, tilted, with a "?" badge until the chat is first opened
   const fab = document.createElement('button');
   fab.type = 'button';
   fab.className = 'sh-fab';
   fab.setAttribute('aria-controls', 'sh-panel');
   fab.setAttribute('aria-expanded', 'false');
-  fab.setAttribute('aria-label', T('اسأل شاطر، مساعد بزل إكس', 'Ask Shater, the PuzzleX assistant'));
-  fab.title = T('اسأل شاطر', 'Ask Shater');
-  fab.innerHTML = logo('sh-fab-logo');
+  fab.setAttribute('aria-label', T('عندك سؤال؟ اسأل شاطر، مساعد بزل إكس', 'Got a question? Ask Shater, the PuzzleX assistant'));
+  fab.innerHTML = `${logo('sh-fab-logo')}<span class="sh-badge" aria-hidden="true">?</span>`;
+  // the notification that pops out of the piece
+  const ping = document.createElement('button');
+  ping.type = 'button';
+  ping.className = 'sh-ping';
+  ping.setAttribute('aria-hidden', 'true');
+  ping.tabIndex = -1;
+  ping.innerHTML = `<span class="sh-ping-q">?</span><span>${T('عندك سؤال؟', 'Got a question?')}</span>`;
 
   // the chat
   const panel = document.createElement('section');
@@ -106,8 +112,8 @@ document.addEventListener('DOMContentLoaded', function initShater() {
     <header class="sh-head">
       <span class="sh-avatar-wrap">${logo('sh-avatar')}</span>
       <p class="sh-who"><b>${T('شاطر', 'Shater')}</b><small class="sh-status"><i></i><span>${STATUS.idle}</span></small></p>
-      ${waHref ? `<a class="sh-wa" href="${waHref}" target="_blank" rel="noopener" data-contact="whatsapp" aria-label="${T('تواصل معنا على واتساب', 'Message us on WhatsApp')}" title="${T('واتساب', 'WhatsApp')}">${WA_SVG}<span>${T('واتساب', 'WhatsApp')}</span></a>` : ''}
-      <button type="button" class="sh-close" aria-label="${T('إغلاق', 'Close')}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      ${waHref ? `<a class="sh-wa" href="${waHref}" target="_blank" rel="noopener" data-contact="whatsapp" aria-label="${T('كلّم فريقنا على واتساب', 'Message our team on WhatsApp')}" title="${T('كلّم فريقنا على واتساب', 'Message our team on WhatsApp')}">${WA_SVG}</a>` : ''}
+      <button type="button" class="sh-close" aria-label="${T('إغلاق', 'Close')}" title="${T('إغلاق', 'Close')}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </header>
     <div class="sh-log" role="log" aria-live="polite"></div>
     <footer class="sh-foot">
@@ -118,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function initShater() {
       </form>
       <p class="sh-left"><span class="sh-dots" aria-hidden="true"></span><span class="sh-left-text"></span></p>
     </footer>`;
-  body.append(fab, panel);
+  body.append(ping, fab, panel);
 
   const log = panel.querySelector('.sh-log');
   const form = panel.querySelector('.sh-form');
@@ -168,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function initShater() {
     return el;
   };
   // typed out: the bubble pops in, then the words arrive one after another with a caret at the end
-  const type = (text, extra) => new Promise((resolve) => {
+  const type = (text, extra, speed = 1) => new Promise((resolve) => {
     const el = row('bot', `${extra || ''} is-new`.trim());
     if (REDUCED) { pieces(text).forEach((p) => el.append(p.url ? linkOf(p.url) : p.text)); toEnd(); resolve(el); return; }
     el.classList.add('is-typing-out');
@@ -183,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function initShater() {
       else p.text.split(/(\s+)/).filter(Boolean).forEach((w) => steps.push({ run: () => caret.before(w), pause: !/^\s+$/.test(w) }));
     });
     const words = steps.filter((s) => s.pause).length;
-    const each = Math.max(18, Math.min(70, 2200 / Math.max(1, words))); // a long answer types faster, never past ~2s
+    const each = Math.max(18, Math.min(70, 2200 / Math.max(1, words))) * speed; // a long answer types faster
     let k = 0;
     const tick = () => {
       if (k < steps.length) { const s = steps[k++]; s.run(); toEnd(); setTimeout(tick, s.pause ? each : 0); return; }
@@ -192,12 +198,12 @@ document.addEventListener('DOMContentLoaded', function initShater() {
       setStatus('idle');
       resolve(el);
     };
-    setTimeout(tick, 120);
+    setTimeout(tick, 160);
   });
   const remember = (who, text, extra) => { st.msgs.push({ who, text, extra: extra || '' }); save(); };
 
-  const GREETING = T('مرحبا، أنا شاطر 👋 بشو بقدر ساعدك؟\nاسألني عن خدمات بزل إكس ميديا، أو كيف ممكن نشتغل معك على مشروعك.',
-    'Hi, I\'m Shater 👋 How can I help?\nAsk me about PuzzleX Media\'s services, or how we could work with you on your project.');
+  const HELLO = T('مرحبا، أنا شاطر 👋 بشو بقدر ساعدك؟', 'Hi, I\'m Shater 👋 How can I help?');
+  const HELLO_2 = T('اسألني عن خدمات بزل إكس ميديا، أو كيف ممكن نشتغل معك على مشروعك.', 'Ask me about PuzzleX Media\'s services, or how we could work with you on your project.');
   const SUGGEST = EN
     ? ['What services do you offer?', 'How does a project with you start?', 'Can you run my brand\'s social media?']
     : ['شو الخدمات اللي بتقدموها؟', 'كيف بيبلش المشروع معكم؟', 'فيكم تمسكوا السوشال ميديا لعلامتي؟'];
@@ -223,54 +229,56 @@ document.addEventListener('DOMContentLoaded', function initShater() {
     toEnd();
   };
 
-  // questions left: a puzzle piece for each, filled while it's still there
+  let busy = false;
+  // questions left: a puzzle piece for each, lit while it's still there
   const drawLeft = () => {
     const done = st.left <= 0;
-    dots.innerHTML = Array.from({ length: LIMIT }, (_, i) => `<svg class="${i < st.left ? 'on' : ''}" viewBox="${VB}"><path d="${mini}"/></svg>`).join('');
+    dots.innerHTML = Array.from({ length: LIMIT }, (_, i) => `<svg class="${i < st.left ? 'on' : ''}" viewBox="${VB}"><path d="${PIECE}"/></svg>`).join('');
     leftText.textContent = done ? T('خلصت أسئلة هالزيارة', 'No questions left this visit')
       : st.left === 1 ? T('سؤال واحد متبقٍّ', '1 question left')
         : st.left === 2 ? T('سؤالان متبقيان', '2 questions left')
           : T(`${st.left} أسئلة متبقية`, `${st.left} questions left`);
     input.disabled = done;
     send.disabled = done || busy;
-    input.placeholder = done ? T('كمّل معنا على واتساب ↑', 'Carry on with us on WhatsApp ↑') : T('اكتب سؤالك…', 'Type your question…');
+    input.placeholder = done ? T('كمّل مع فريقنا على واتساب ↑', 'Carry on with our team on WhatsApp ↑') : T('اكتب سؤالك…', 'Type your question…');
     panel.classList.toggle('is-done', done);
   };
 
-  // thinking: three pieces slide together and lock, again and again, until the answer comes
+  // thinking: three little pieces slide in and lock together, again and again, until the answer comes
   const thinking = () => {
     const el = row('bot', 'is-thinking');
-    el.innerHTML = `<span class="sh-think" aria-hidden="true">${[0, 1, 2].map((i) => `<svg style="--i:${i}" viewBox="${VB}"><path d="${mini}"/></svg>`).join('')}</span><span class="sh-think-text">${T('شاطر عم يفكّر', 'Shater is thinking')}</span>`;
+    el.innerHTML = `<span class="sh-think" aria-hidden="true">${[0, 1, 2].map((i) => `<svg style="--i:${i}" viewBox="${VB}"><path d="${PIECE}"/></svg>`).join('')}</span><span class="sh-think-text">${T('شاطر عم يفكّر', 'Shater is thinking')}</span>`;
     setStatus('thinking');
     toEnd();
     return el;
   };
 
-  let busy = false;
   async function ask(raw) {
     const question = String(raw || '').trim().slice(0, 500);
     if (!question || busy || st.left <= 0) return;
     busy = true;
-    send.disabled = true;
     sugg?.remove();
     sugg = null;
     put('me', question, 'is-new');
     remember('me', question);
+    // it counts the moment it's sent (the server counts it too, and has the last word)
+    st.left = Math.max(0, st.left - 1);
+    save();
+    drawLeft();
     input.value = '';
     form.classList.remove('has-text');
     fit();
     const wait = thinking();
     const started = Date.now();
-    let data = {}, status = 0;
+    let data = {};
     try {
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lang: EN ? 'en' : 'ar', question, history: st.history }),
       });
-      status = res.status;
       data = await res.json().catch(() => ({}));
-    } catch (e) { status = 0; }
+    } catch (e) { /* offline: shown below */ }
     // the thinking shows for a moment even when the answer is instant, so it reads as an answer and not a glitch
     const minWait = REDUCED ? 0 : 900 - (Date.now() - started);
     if (minWait > 0) await new Promise((r) => setTimeout(r, minWait));
@@ -280,16 +288,17 @@ document.addEventListener('DOMContentLoaded', function initShater() {
     if (data.ok) {
       reply = data.answer;
       st.history.push({ q: question, a: data.answer });
-    } else if (data.reason === 'not-ready' || (!ON && status === 503)) {
-      reply = T('أنا لسا عم اتجهّز لجاوب 🙏 بس فريقنا موجود هلق: اضغط على واتساب فوق وبيردّوا عليك.', 'I\'m still getting ready to answer 🙏 Our team is here right now though: tap WhatsApp above and they\'ll reply.');
+    } else if (data.reason === 'not-ready') {
+      reply = T('أنا لسا عم اتجهّز لجاوب 🙏 بس فريقنا موجود هلق: اضغط زر واتساب الأخضر فوق وبيردّوا عليك.', 'I\'m still getting ready to answer 🙏 Our team is here right now though: tap the green WhatsApp button above.');
       extra = 'is-note';
     } else if (data.reason === 'limit') {
       st.left = 0;
     } else if (data.reason === 'busy') {
-      reply = T('وصلني أسئلة كتير من نفس الشبكة بهالساعة. جرّب بعد شوي، أو كلّمنا على واتساب.', 'Lots of questions from this network this hour. Try again later, or message us on WhatsApp.');
+      reply = T('وصلني أسئلة كتير من نفس الشبكة بهالساعة. جرّب بعد شوي، أو كلّم فريقنا على واتساب.', 'Lots of questions from this network this hour. Try again later, or message our team on WhatsApp.');
       extra = 'is-note';
     } else {
-      reply = T('ما قدرت جاوب هلق، صار خلل بسيط. جرّب كمان مرة، وما رح ينحسب السؤال.', 'I couldn\'t answer just now. Try again; it won\'t count as a question.');
+      if (data.code) console.warn('[shater] OpenRouter answered', data.code);
+      reply = T('ما قدرت جاوب هلق، صار خلل بالاتصال. فريقنا جاهز يجاوبك على واتساب من الزر الأخضر فوق.', 'I couldn\'t answer just now. Our team can answer you on WhatsApp: the green button above.');
       extra = 'is-note';
     }
     save();
@@ -319,53 +328,80 @@ document.addEventListener('DOMContentLoaded', function initShater() {
   });
   form.addEventListener('submit', (ev) => { ev.preventDefault(); ask(input.value); });
 
-  // a greeting next to the piece, once a visit, after the visitor has had a look round
-  const hello = document.createElement('div');
-  hello.className = 'wa-hello sh-hello';
-  hello.setAttribute('role', 'status');
-  hello.innerHTML = '<b></b><span></span><button type="button" class="wa-hello-x"></button>';
-  hello.querySelector('b').textContent = T('مرحبا، أنا شاطر 👋', 'Hi, I\'m Shater 👋');
-  hello.querySelector('span').textContent = T('بشو بقدر ساعدك؟ اسألني عن خدماتنا.', 'How can I help? Ask me about our services.');
-  const x = hello.querySelector('.wa-hello-x');
-  x.setAttribute('aria-label', T('إغلاق', 'Close'));
-  x.textContent = '×';
-  const hideHello = () => { hello.classList.remove('is-in'); st.hello = true; save(); setTimeout(() => hello.remove(), 400); };
+  // open / close: the chat grows out of the piece (and goes back into it), like an app from the Dock.
+  // From the piece's centre it starts as a small rounded square, stretches up and out, then settles.
+  let anim = null;
+  const fromPiece = () => {
+    const f = fab.getBoundingClientRect(), p = panel.getBoundingClientRect();
+    const dx = f.left + f.width / 2 - (p.left + p.width / 2), dy = f.top + f.height / 2 - (p.top + p.height / 2);
+    return { dx, dy, sx: Math.max(0.06, f.width / p.width), sy: Math.max(0.06, f.height / p.height) };
+  };
+  const genie = (opening) => {
+    anim?.cancel();
+    if (REDUCED || !panel.animate) return null;
+    const { dx, dy, sx, sy } = fromPiece();
+    const small = `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`;
+    // half way: still narrow and leaning towards the piece, but already tall, the way a window pours out of the Dock
+    const mid = `translate(${dx * 0.45}px, ${dy * 0.3}px) scale(${Math.min(0.55, Math.max(sx * 2.2, 0.32))}, 0.72)`;
+    const frames = [
+      { transform: small, borderRadius: '40%', opacity: 0.3, filter: 'brightness(1.6)' },
+      { transform: mid, borderRadius: '30px', opacity: 1, filter: 'brightness(1.15)', offset: 0.45 },
+      { transform: 'none', borderRadius: '26px', opacity: 1, filter: 'none' },
+    ];
+    anim = panel.animate(opening ? frames : frames.slice().reverse(), {
+      duration: opening ? 520 : 380, easing: opening ? 'cubic-bezier(.2, .9, .25, 1.05)' : 'cubic-bezier(.55, 0, .75, .3)', fill: 'both',
+    });
+    return anim;
+  };
 
-  const open = async (focus = true) => {
+  const open = async (restoring = false) => {
     panel.hidden = false;
-    requestAnimationFrame(() => panel.classList.add('is-open'));
+    panel.classList.add('is-open');
     fab.setAttribute('aria-expanded', 'true');
     document.documentElement.classList.add('sh-open');
     st.open = true;
-    st.hello = true;
-    hello.remove();
+    st.seen = true;
+    hidePing();
     save();
+    if (!restoring) {
+      fab.classList.remove('is-tapped');
+      void fab.offsetWidth;
+      fab.classList.add('is-tapped');
+      genie(true);
+    }
     toEnd();
-    if (focus && st.left > 0 && matchMedia('(hover: hover)').matches) input.focus({ preventScroll: true });
+    if (!restoring && st.left > 0 && matchMedia('(hover: hover)').matches) input.focus({ preventScroll: true });
+    // the first time the chat opens, Shater types his greeting then and there
     if (!st.msgs.length) {
-      remember('bot', GREETING);
-      await type(GREETING);
+      remember('bot', HELLO);
+      remember('bot', HELLO_2);
+      if (!restoring) await new Promise((r) => setTimeout(r, REDUCED ? 0 : 420));
+      await type(HELLO, '', 1.4);
+      await type(HELLO_2);
       drawSuggestions();
     }
   };
   const close = () => {
-    panel.classList.remove('is-open');
     fab.setAttribute('aria-expanded', 'false');
     document.documentElement.classList.remove('sh-open');
     st.open = false;
     save();
-    setTimeout(() => { if (!st.open) panel.hidden = true; }, 260);
+    const a = genie(false);
+    const done = () => { if (!st.open) { panel.classList.remove('is-open'); panel.hidden = true; anim?.cancel(); } };
+    if (a) a.onfinish = done; else done();
   };
   fab.addEventListener('click', () => (st.open ? close() : open()));
+  ping.addEventListener('click', () => open());
   panel.querySelector('.sh-close').addEventListener('click', () => { close(); fab.focus({ preventScroll: true }); });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && st.open) { close(); fab.focus({ preventScroll: true }); } });
 
-  x.addEventListener('click', (ev) => { ev.stopPropagation(); hideHello(); });
-  hello.addEventListener('click', () => { hideHello(); open(); });
-  if (!st.hello && !REDUCED) {
-    body.append(hello);
-    setTimeout(() => { if (hello.isConnected && !st.open) hello.classList.add('is-in'); }, 9000);
-    setTimeout(() => { if (hello.isConnected) hideHello(); }, 24000);
+  // the notification: "Got a question?" pops out of the piece a few seconds in, until the chat is opened
+  function hidePing() { ping.classList.remove('is-in'); fab.classList.add('is-seen'); }
+  if (st.seen) fab.classList.add('is-seen');
+  else {
+    setTimeout(() => { if (!st.open && !st.seen) ping.classList.add('is-in'); }, st.pinged ? 1500 : 5000);
+    st.pinged = true;
+    save();
   }
 
   // on another page: the same conversation, at once, and open if it was open
@@ -373,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function initShater() {
   drawSuggestions();
   setStatus('idle');
   drawLeft();
-  if (st.open) open(false);
+  if (st.open) open(true);
 });
 
 /* ---------- home · service request: pick the pieces, the button opens the form with them chosen ---------- */
