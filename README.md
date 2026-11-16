@@ -201,6 +201,9 @@ Needs only Node and Chrome. `--preview` writes a PNG per page plus `overview.png
 | `GOOGLE_SITE_VERIFICATION` | The code from Google Search Console's "HTML tag" method: adds its meta tag to every page |
 | `CONTACT_TO` | Where contact messages are emailed |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Your mail provider's SMTP details |
+| `OPENROUTER_API_KEY` | Turns on Shater (شاطر), the assistant in the corner: a key from openrouter.ai/keys. Without it the widget still opens, says it isn't ready yet and points to WhatsApp |
+| `OPENROUTER_MODEL` | Which model answers (default `openai/gpt-4o-mini`); any id from openrouter.ai/models |
+| `ASSISTANT_QUESTIONS` | Questions a visitor may ask Shater in one browser session (default 3; at most 12 an hour per address) |
 
 ## What the server does
 

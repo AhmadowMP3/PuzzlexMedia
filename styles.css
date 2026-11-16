@@ -2289,3 +2289,123 @@ html[lang="ar"] .fbr { direction: rtl; }
   .profile-viewer { display: none; }
   .profile-phone-note { display: block; }
 }
+
+/* =========================================================
+   Shater (شاطر): the assistant in the bottom-left corner, where the WhatsApp button was (extras.js)
+   ========================================================= */
+html.has-shater .wa-fab { display: none; } /* WhatsApp moves inside the chat; without scripts it stays */
+.sh-fab {
+  position: fixed; z-index: 66; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 8px; height: 58px; padding: 0 18px 0 8px; border: 0; border-radius: 999px; cursor: pointer;
+  background: #0f0f11; color: var(--text); font: 800 16px var(--ar);
+  box-shadow: 0 0 0 1.5px rgba(215, 255, 0, .55), 0 14px 34px -12px rgba(215, 255, 0, .55);
+  transition: transform .25s ease, translate .35s ease, box-shadow .25s ease;
+  animation: sh-glow 3s ease-in-out infinite;
+}
+[dir="ltr"] .sh-fab { font-family: var(--lat); }
+@keyframes sh-glow { 50% { box-shadow: 0 0 0 1.5px rgba(215, 255, 0, .9), 0 14px 40px -8px rgba(215, 255, 0, .8); } }
+.sh-fab:hover { transform: translateY(-3px); }
+.sh-fab:focus-visible { outline: 2px solid var(--lime); outline-offset: 4px; }
+.sh-fab-logo { width: 44px; height: 44px; overflow: visible; flex: none; }
+.sh-piece { fill: var(--lime); }
+.sh-star { fill: #0a0a0b; transform-origin: 50px 50px; animation: sh-twinkle 4s ease-in-out infinite; }
+@keyframes sh-twinkle { 0%, 80%, 100% { transform: scale(1) rotate(0); } 88% { transform: scale(.82) rotate(45deg); } }
+html.sh-open .sh-fab { animation: none; }
+/* out of the way of the cookie question, the phone menu and the request bar, like the WhatsApp button was */
+body:has(.px-consent.in) .sh-fab { translate: 0 calc(-100% - 150px); }
+html.menu-lock .sh-fab, html.menu-lock .sh-panel { opacity: 0; pointer-events: none; }
+
+.sh-panel {
+  position: fixed; z-index: 90; left: max(18px, env(safe-area-inset-left)); bottom: calc(max(18px, env(safe-area-inset-bottom)) + 70px);
+  display: flex; flex-direction: column; width: min(380px, calc(100vw - 36px)); height: min(600px, calc(100svh - 120px));
+  border-radius: 24px; overflow: hidden; background: #111113; color: var(--text);
+  border: 1px solid rgba(215, 255, 0, .35); box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .85), 0 0 40px -10px rgba(215, 255, 0, .25);
+  opacity: 0; transform: translateY(16px) scale(.96); transform-origin: 0 100%;
+  transition: opacity .22s ease, transform .3s cubic-bezier(.3, 1.3, .5, 1);
+}
+.sh-panel.is-open { opacity: 1; transform: none; }
+.sh-panel[hidden] { display: none; }
+.sh-head { display: flex; align-items: center; gap: 12px; padding: 14px 14px 12px 16px; border-bottom: 1px solid var(--line); background: #151518; }
+.sh-avatar { width: 42px; height: 42px; overflow: visible; flex: none; }
+.sh-who { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.sh-who b { font-weight: 900; font-size: 17px; }
+.sh-who small { color: var(--muted); font-size: 12.5px; }
+.sh-close {
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--text);
+  font: 400 22px/1 var(--lat); cursor: pointer; flex: none; transition: border-color .2s, color .2s;
+}
+.sh-close:hover { border-color: var(--lime); color: var(--accent-text); }
+.sh-close:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+/* WhatsApp, at the top of the chat */
+.sh-wa {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 14px 0; padding: 10px 14px; border-radius: 14px;
+  background: linear-gradient(135deg, #25D366, #128C7E); color: #fff; font-weight: 800; font-size: 14px;
+  transition: filter .2s, transform .2s;
+}
+.sh-wa:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.sh-wa svg { width: 20px; height: 20px; fill: currentColor; flex: none; }
+.sh-panel.is-done .sh-wa { animation: sh-nudge 1.6s ease-in-out 2; }
+@keyframes sh-nudge { 50% { box-shadow: 0 0 0 5px rgba(37, 211, 102, .3); } }
+
+.sh-log { flex: 1; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 16px 14px; scrollbar-width: thin; }
+.sh-msg {
+  max-width: 86%; padding: 10px 14px; border-radius: 18px; font-size: 14.5px; line-height: 1.75; white-space: pre-line; overflow-wrap: anywhere;
+  user-select: text; -webkit-user-select: text;
+}
+.sh-bot { align-self: flex-start; background: #1d1d21; border-start-start-radius: 6px; }
+.sh-me { align-self: flex-end; background: var(--lime); color: #0a0a0b; font-weight: 600; border-start-end-radius: 6px; }
+.sh-msg a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+.sh-bot.is-note { background: rgba(215, 255, 0, .08); border: 1px solid rgba(215, 255, 0, .25); }
+.sh-bot.is-end { background: rgba(37, 211, 102, .1); border: 1px solid rgba(37, 211, 102, .35); }
+.sh-bot.is-typing { display: flex; gap: 5px; padding: 14px 16px; }
+.sh-bot.is-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); animation: sh-dot 1s ease-in-out infinite; }
+.sh-bot.is-typing i:nth-child(2) { animation-delay: .15s; }
+.sh-bot.is-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes sh-dot { 0%, 60%, 100% { opacity: .3; transform: none; } 30% { opacity: 1; transform: translateY(-4px); } }
+
+.sh-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 10px; }
+.sh-chips[hidden] { display: none; }
+.sh-chip {
+  padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(215, 255, 0, .4); background: none; color: var(--text);
+  font: 600 13px var(--ar); cursor: pointer; transition: background-color .2s, color .2s;
+}
+[dir="ltr"] .sh-chip { font-family: var(--lat); }
+.sh-chip:hover { background: var(--lime); color: #0a0a0b; }
+
+.sh-form { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px 4px; border-top: 1px solid var(--line); }
+.sh-form textarea {
+  flex: 1; min-height: 44px; max-height: 110px; resize: none; padding: 11px 14px; border-radius: 16px; border: 1px solid var(--line);
+  background: rgba(var(--fg-rgb), .05); color: var(--text); font: 500 15px/1.5 var(--ar); user-select: text; -webkit-user-select: text;
+}
+[dir="ltr"] .sh-form textarea { font-family: var(--lat); }
+.sh-form textarea::placeholder { color: var(--muted); }
+.sh-form textarea:focus { outline: none; border-color: var(--lime); }
+.sh-form textarea:disabled { opacity: .5; }
+.sh-send {
+  width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 0; border-radius: 50%; cursor: pointer;
+  background: var(--lime); color: #0a0a0b; transition: transform .2s, opacity .2s;
+}
+.sh-send svg { width: 20px; height: 20px; fill: currentColor; }
+[dir="rtl"] .sh-send svg { transform: scaleX(-1); }
+.sh-send:hover { transform: scale(1.06); }
+.sh-send:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.sh-send:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.sh-left { padding: 2px 14px 10px; color: var(--muted); font-size: 12px; text-align: center; }
+
+/* the greeting bubble sits above Shater the way it sat above the WhatsApp button */
+.sh-hello { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 74px); }
+html.sh-open .sh-hello { display: none; }
+
+@media (max-width: 600px) {
+  .sh-fab { height: 52px; padding: 0 14px 0 6px; font-size: 15px; left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  .sh-fab-logo { width: 40px; height: 40px; }
+  body:has(.my-puzzle:not([hidden])) .sh-fab { translate: 0 -72px; }
+  /* a sheet over the bottom of the screen */
+  .sh-panel { left: 8px; right: 8px; bottom: 8px; width: auto; height: min(78svh, 620px); border-radius: 22px; }
+  html.sh-open .sh-fab { opacity: 0; pointer-events: none; }
+}
+@media (max-width: 760px) { html.rq-in-view .sh-fab { opacity: 0; pointer-events: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .sh-fab, .sh-star, .sh-panel.is-done .sh-wa, .sh-bot.is-typing i { animation: none; }
+  .sh-panel { transition: none; }
+}

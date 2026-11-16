@@ -43,6 +43,12 @@ const store = createStore({ dataDir: DATA_DIR, root: ROOT });
 store.seed();
 // the team, the company profile, the newsletter and job applications (lib/company.js); json / clientIp / readBody are below
 const company = createCompany({ store, json, clientIp, readBody });
+// Shater, the site's assistant: OpenRouter behind /api/assistant (lib/assistant.js); it answers from llms.txt
+const { createAssistant } = require('./lib/assistant');
+const assistant = createAssistant({
+  json, clientIp, readBody, siteUrl: SITE_URL, secureCookies: () => process.env.COOKIE_SECURE !== '0',
+  knowledge: async () => (await llmsEntry()).body.toString('utf8'),
+});
 company.seed();
 store.applyReviewTranslations(path.join(ROOT, 'content', 'reviews-en.json'))
   .then((n) => n && console.log(`[content] English added to ${n} client review(s)`), (err) => console.error('[content] review translations:', err.message));
@@ -505,6 +511,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (p === '/api/subscribe') return await company.subscribe(req, res);
     if (p === '/api/apply') return await company.applyJob(req, res);
+    if (p === '/api/assistant') return await assistant.handle(req, res);
     if (p.startsWith('/api/admin/')) return await admin(req, res, p);
     // a client's invoice / receipt / quotation, for whoever has the link: never indexed, never cached by a proxy
     if (/^\/(api\/)?doc(\/|\.html$)/.test(p)) {
