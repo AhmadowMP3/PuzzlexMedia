@@ -2373,7 +2373,20 @@ body[data-shater="off"] .sh-status i { background: #f5b942; box-shadow: 0 0 0 3p
 }
 .sh-bot { align-self: flex-start; background: #1b1b1f; border-radius: 18px 18px 18px 18px; border-start-start-radius: 6px; }
 .sh-me { align-self: flex-end; background: var(--lime); color: #0a0a0b; font-weight: 600; border-radius: 18px; border-start-end-radius: 6px; }
-.sh-msg a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 3px; }
+/* a link in an answer: a small button with an icon (WhatsApp green with its logo; a page of the site lime with its name) */
+.sh-link {
+  display: inline-flex; align-items: center; gap: 7px; margin: 6px 0 2px; padding: 7px 13px 7px 11px; border-radius: 999px;
+  vertical-align: middle; white-space: nowrap; font-weight: 800; font-size: 13.5px; line-height: 1.2; text-decoration: none;
+  background: rgba(215, 255, 0, .1); color: var(--lime); border: 1px solid rgba(215, 255, 0, .35);
+  transition: background-color .2s, color .2s, transform .2s;
+}
+[dir="rtl"] .sh-link, .sh-msg[dir="auto"] .sh-link:dir(rtl) { padding: 7px 11px 7px 13px; }
+.sh-link:hover { background: var(--lime); color: #0a0a0b; transform: translateY(-1px); }
+.sh-link svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.sh-link.is-wa { background: #25D366; border-color: #25D366; color: #fff; box-shadow: 0 6px 16px -8px rgba(37, 211, 102, .9); }
+.sh-link.is-wa:hover { background: #1ebe5b; color: #fff; }
+.sh-link.is-wa svg { fill: currentColor; stroke: none; }
+.sh-me .sh-link { background: #0a0a0b; color: var(--lime); }
 .sh-bot.is-note { background: #1b1b1f; box-shadow: inset 3px 0 0 #f5b942; }
 [dir="rtl"] .sh-bot.is-note { box-shadow: inset -3px 0 0 #f5b942; }
 .sh-bot.is-end { box-shadow: inset 3px 0 0 #25D366; }

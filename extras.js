@@ -140,22 +140,45 @@ document.addEventListener('DOMContentLoaded', function initShater() {
   // It comes back as a list of pieces, so the typing can show it word by word and still end with real links.
   const pieces = (text) => {
     const out = [];
-    const re = /https?:\/\/(?:www\.)?(?:puzzlexmedia\.com|wa\.me)[^\s<>()"'،]*/g;
+    // with or without https:// (models often write a bare "wa.me/…" or "puzzlexmedia.com/…")
+    const re = /(?:https?:\/\/)?(?:www\.)?(?:puzzlexmedia\.com|wa\.me)(?:\/[^\s<>()"'،]*)?/g;
     let last = 0, m;
     while ((m = re.exec(text))) {
-      const url = m[0].replace(/[.,؛:!?]+$/, '');
+      const raw = m[0].replace(/[.,؛:!?]+$/, '');
       if (m.index > last) out.push({ text: text.slice(last, m.index) });
-      out.push({ url });
-      last = m.index + url.length;
+      out.push({ url: /^https?:/.test(raw) ? raw : `https://${raw.startsWith('wa.me') ? '' : 'www.'}${raw.replace(/^www\./, '')}` });
+      last = m.index + raw.length;
     }
     if (last < text.length) out.push({ text: text.slice(last) });
     return out;
   };
+  // a link in an answer is a small button: WhatsApp with its own icon and colour, a page of the site with its name
+  const PAGE_NAMES = {
+    '': ['الصفحة الرئيسية', 'Home'], 'about.html': ['من نحن', 'About us'], 'services.html': ['خدماتنا', 'Our services'],
+    'work.html': ['أعمالنا', 'Our work'], 'project.html': ['المشروع', 'The project'], 'feedback.html': ['آراء العملاء', 'Client feedback'],
+    'contact.html': ['تواصل معنا', 'Contact us'], 'blog.html': ['المدونة', 'Blog'], 'article.html': ['المقال', 'The article'],
+    'careers.html': ['انضم لفريقنا', 'Join our team'], 'team.html': ['فريقنا', 'Our team'], 'profile.html': ['الملف التعريفي', 'Company profile'],
+    'privacy.html': ['سياسة الخصوصية', 'Privacy policy'],
+  };
+  const LINK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3.2-3.2a4.5 4.5 0 0 0-6.4-6.4L12 5.6M14 10a4.5 4.5 0 0 0-6.4 0l-3.2 3.2a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2"/></svg>';
   const linkOf = (url) => {
     const a = document.createElement('a');
     a.href = url;
-    a.textContent = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
-    if (/wa\.me/.test(url)) { a.target = '_blank'; a.rel = 'noopener'; }
+    a.className = 'sh-link';
+    if (/wa\.me/.test(url)) {
+      a.classList.add('is-wa');
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.dataset.contact = 'whatsapp';
+      a.innerHTML = `${WA_SVG || LINK_SVG}<span>${T('راسلنا على واتساب', 'Message us on WhatsApp')}</span>`;
+      return a;
+    }
+    let page = '';
+    try { page = new URL(url).pathname.replace(/^\/(en\/)?/, '').replace(/\/$/, ''); } catch (e) { /* shown as is */ }
+    // the visitor stays in their language: an English page's link to an Arabic page goes to its English twin, and back
+    try { const u = new URL(url); u.pathname = `/${EN ? 'en/' : ''}${page}`; a.href = u.href; } catch (e) { /* keep it */ }
+    const name = PAGE_NAMES[page] ? PAGE_NAMES[page][EN ? 1 : 0] : T('افتح الصفحة', 'Open the page');
+    a.innerHTML = `${LINK_SVG}<span>${name}</span>`;
     return a;
   };
 
@@ -348,10 +371,13 @@ document.addEventListener('DOMContentLoaded', function initShater() {
       { transform: mid, borderRadius: '30px', opacity: 1, filter: 'brightness(1.15)', offset: 0.45 },
       { transform: 'none', borderRadius: '26px', opacity: 1, filter: 'none' },
     ];
-    anim = panel.animate(opening ? frames : frames.slice().reverse(), {
-      duration: opening ? 520 : 380, easing: opening ? 'cubic-bezier(.2, .9, .25, 1.05)' : 'cubic-bezier(.55, 0, .75, .3)', fill: 'both',
+    const duration = opening ? 520 : 380;
+    const a = anim = panel.animate(opening ? frames : frames.slice().reverse(), {
+      duration, easing: opening ? 'cubic-bezier(.2, .9, .25, 1.05)' : 'cubic-bezier(.55, 0, .75, .3)', fill: 'both',
     });
-    return anim;
+    // safety net: a tab in the background draws no frames, so the animation could wait; it ends on time regardless
+    setTimeout(() => { if (a.playState !== 'finished' && a.playState !== 'idle') a.finish(); }, duration + 250);
+    return a;
   };
 
   const open = async (restoring = false) => {
