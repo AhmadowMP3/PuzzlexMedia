@@ -491,7 +491,7 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 
-const admin = createAdmin({ store, auth, content, clientIp, json, readBody, serviceLabels: SERVICES, mail, analytics, company });
+const admin = createAdmin({ store, auth, content, clientIp, json, readBody, serviceLabels: SERVICES, mail, analytics, company, assistant });
 // the client's copy of an invoice / receipt / quotation: /doc/<token> (doc.html, which fetches /api/doc/<token>)
 const invoices = createInvoices({ store, readBody });
 

@@ -252,3 +252,37 @@ i.ivdd-dot.st-late { color: var(--danger); }
 .ivx-numb-part b { font-size: 15px; font-weight: 800; letter-spacing: .04em; color: var(--lime); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ivx-numb-part small { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 .ivx-numb-fixed { justify-self: start; padding: 8px 14px; border-radius: 10px; background: var(--ink); color: var(--lime); font-size: 15px; letter-spacing: .04em; overflow-wrap: anywhere; }
+
+/* «اكتب بمساعدة الذكاء الاصطناعي» (invoices.js ivAiWrite): the link under a description, and its window */
+.ivx-desc { display: grid; gap: 6px; }
+.ivx-ai-btn {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(215, 255, 0, .35); background: rgba(215, 255, 0, .06); color: var(--lime); font-family: inherit; font-weight: 700; font-size: 12.5px;
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.ivx-ai-btn:hover { background: var(--lime); border-color: var(--lime); color: #0a0a0b; }
+.ivx-ai-btn:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+dialog.ivx-ai { width: min(620px, calc(100% - 24px)); display: grid; gap: 14px; }
+dialog.ivx-ai:not([open]) { display: none; }
+.ivx-ai-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ivx-ai-head h2 { margin: 0; color: var(--lime); }
+.ivx-ai textarea { width: 100%; field-sizing: content; resize: vertical; line-height: 1.8; }
+.ivx-ai-brief { min-height: 110px; }
+.ivx-ai-result { display: grid; gap: 8px; padding: 14px; border: 1px solid rgba(215, 255, 0, .3); border-radius: 16px; background: rgba(215, 255, 0, .04); animation: ivx-ai-in .35s ease-out both; }
+.ivx-ai-result[hidden] { display: none; }
+.ivx-ai-result-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ivx-ai-preview { min-height: 120px; background: var(--ink); }
+@keyframes ivx-ai-in { from { opacity: 0; transform: translateY(8px); } }
+.ivx-ai-status { min-height: 1.2em; margin: 0; font-size: 13px; color: var(--muted); }
+.ivx-ai-status:empty { display: none; }
+.ivx-ai-status.err { color: #ff8a8a; }
+/* writing: the text shimmers while the answer is on its way */
+.ivx-ai-status.busy {
+  color: transparent; font-weight: 700;
+  background: linear-gradient(90deg, rgba(215, 255, 0, .45) 30%, var(--lime) 50%, rgba(215, 255, 0, .45) 70%) 0 0 / 220% 100%;
+  -webkit-background-clip: text; background-clip: text; animation: ivx-ai-shine 1.4s linear infinite;
+}
+@keyframes ivx-ai-shine { from { background-position: 110% 0; } to { background-position: -110% 0; } }
+.ivx-ai.is-busy .ivx-ai-brief { opacity: .6; }
+.ivx-ai-apply:empty, .ivx-ai-apply:not(:has(button:not([hidden]))) { display: none; }
+@media (prefers-reduced-motion: reduce) { .ivx-ai-result, .ivx-ai-status.busy { animation: none; } }

@@ -43,6 +43,86 @@ const ivGrow = (box) => {
 };
 const ivOverdue = (d) => d.type === 'invoice' && (d.status === 'sent' || d.status === 'partial') && d.dueDate && d.dueDate < ivToday();
 
+// «اكتب بمساعدة الذكاء الاصطناعي»: a window where the team explains the line in their own words and dialect; the
+// server (POST /ai/invoice-text → lib/assistant.js) returns the formal wording in the document's language, shown in an
+// editable preview; nothing reaches the document until «اعتماد».
+// kind: 'item' (a line's description) or 'receipt' (a receipt's «وذلك عن»); apply(text, mode) with mode 'replace' | 'append'
+function ivAiWrite({ kind, lang, current, apply }) {
+  const en = lang === 'en';
+  const brief = h('textarea', {
+    class: 'ivx-ai-brief', dir: 'auto', rows: 5, maxlength: 2000,
+    placeholder: kind === 'receipt'
+      ? 'مثال: هي الدفعة الأولى من مشروع الهوية تبع محل الورد، نص المبلغ'
+      : 'مثال: بدنا نعمله لوغو جديد مع ٣ اقتراحات وتعديلين، وملف هوية كامل للسوشال',
+  });
+  const status = h('p', { class: 'ivx-ai-status', role: 'status' });
+  const preview = h('textarea', { class: 'ivx-ai-preview', dir: 'auto', rows: 6, maxlength: IV.limits.desc });
+  const previewBox = h('div', { class: 'ivx-ai-result', hidden: true },
+    h('div', { class: 'ivx-ai-result-head' }, h('b', null, 'المعاينة'), h('span', { class: 'hint' }, 'تقدر تعدّل عليها قبل الاعتماد')),
+    ivGrow(preview));
+  const write = h('button', { type: 'button', class: 'btn btn-primary ivx-ai-go' }, '✦ اكتب الوصف');
+  const again = h('button', { type: 'button', class: 'btn btn-ghost', hidden: true }, '↻ أعد الكتابة');
+  const replace = h('button', { type: 'button', class: 'btn btn-primary', hidden: true }, current.trim() ? 'اعتماد بدل الوصف الحالي' : 'اعتماد وإدخاله');
+  const append = h('button', { type: 'button', class: 'btn btn-ghost', hidden: true }, 'اعتماد وإضافته بعد الحالي');
+  const dlg = h('dialog', { class: 'ivx-ai' },
+    h('div', { class: 'ivx-ai-head' },
+      h('h2', null, '✦ اكتب بمساعدة الذكاء الاصطناعي'),
+      h('button', { type: 'button', class: 'btn btn-icon btn-small', 'aria-label': 'إغلاق', onclick: () => dlg.close() }, '✕')),
+    h('p', { class: 'hint' }, `اشرح بطريقتك وبلهجتك شو الشغلة، والذكاء الاصطناعي بيكتبها ${kind === 'receipt' ? 'جملة رسمية لسطر «وذلك عن»' : 'وصفاً مرتباً ورسمياً للبند'} ${en ? 'بالإنجليزية (لغة المستند)' : 'بالعربية الفصحى (لغة المستند)'}.`),
+    h('label', { class: 'field' }, h('span', null, 'شو بدك تكتب؟'), ivGrow(brief)),
+    h('div', { class: 'row' }, write, again),
+    status, previewBox,
+    h('div', { class: 'row ivx-ai-apply' }, replace, current.trim() && kind !== 'receipt' ? append : null));
+
+  let busy = false;
+  const run = async () => {
+    const text = brief.value.trim();
+    if (!text) { brief.focus(); status.textContent = 'اكتب شرحاً قصيراً أولاً.'; status.className = 'ivx-ai-status err'; return; }
+    if (busy) return;
+    busy = true;
+    write.disabled = again.disabled = true;
+    dlg.classList.add('is-busy');
+    status.className = 'ivx-ai-status busy';
+    status.textContent = 'عم نكتب الوصف…';
+    try {
+      const r = await api('POST', '/ai/invoice-text', { text, lang, kind });
+      preview.value = r.text;
+      preview.dispatchEvent(new Event('input'));
+      previewBox.hidden = false;
+      again.hidden = replace.hidden = false;
+      append.hidden = false;
+      write.hidden = true;
+      status.textContent = '';
+      status.className = 'ivx-ai-status';
+      preview.focus();
+    } catch (e) {
+      status.className = 'ivx-ai-status err';
+      status.textContent = e.message;
+    } finally {
+      busy = false;
+      write.disabled = again.disabled = false;
+      dlg.classList.remove('is-busy');
+    }
+  };
+  write.addEventListener('click', run);
+  again.addEventListener('click', run);
+  brief.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); run(); } });
+  const take = (mode) => {
+    const text = preview.value.trim();
+    if (!text) { preview.focus(); return; }
+    apply(text, mode);
+    dlg.close();
+    toast('تم إدخال الوصف');
+  };
+  replace.addEventListener('click', () => take('replace'));
+  append.addEventListener('click', () => take('append'));
+  dlg.addEventListener('close', () => dlg.remove());
+  document.body.append(dlg);
+  dlg.showModal();
+  brief.focus();
+}
+const ivAiButton = (onclick) => h('button', { type: 'button', class: 'ivx-ai-btn', onclick }, '✦ اكتب بمساعدة الذكاء الاصطناعي');
+
 // the same arithmetic as lib/invoices.js (whole minor units), for the preview
 function ivTotals(d, docs) {
   const dec = InvoiceDoc.decimals(d.currency);
@@ -594,12 +674,18 @@ function ivEditor(view, d, base, opts = {}) {
     const count = h('span', { class: 'hint ivx-count' });
     const show = () => { const n = String(obj[key] ?? '').length; count.textContent = n > max * 0.7 ? `${n.toLocaleString('en-US')} / ${max.toLocaleString('en-US')}` : ''; };
     show();
-    return h('label', { class: 'field' }, h('span', null, label),
-      ivGrow(h('textarea', {
-        class: `ivx-long${props.tall ? ' tall' : ''}`, value: obj[key] ?? '', dir: 'auto', maxlength: max, placeholder: props.placeholder,
-        oninput: (e) => { obj[key] = e.target.value; show(); changed(); },
-      })),
+    const box = ivGrow(h('textarea', {
+      class: `ivx-long${props.tall ? ' tall' : ''}`, value: obj[key] ?? '', dir: 'auto', maxlength: max, placeholder: props.placeholder,
+      oninput: (e) => { obj[key] = e.target.value; show(); changed(); },
+    }));
+    const field = h('label', { class: 'field' }, h('span', null, label), box,
       props.hint ? h('span', { class: 'hint' }, props.hint) : null, count);
+    if (!props.ai) return field;
+    // with «اكتب بمساعدة الذكاء الاصطناعي» under it (the receipt's «وذلك عن»)
+    return h('div', { class: 'ivx-desc' }, field, ivAiButton(() => ivAiWrite({ kind: props.ai, lang: d.lang, current: String(obj[key] ?? ''), apply: (text, mode) => {
+      box.value = mode === 'append' && String(obj[key] ?? '').trim() ? `${String(obj[key]).trimEnd()}\n${text}` : text;
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+    } })));
   };
   const warning = (test) => { const w = h('span', { class: 'hint warn', role: 'status' }); const f = (c) => { w.textContent = test(c) || ''; }; checks.push(f); return w; };
 
@@ -641,8 +727,14 @@ function ivEditor(view, d, base, opts = {}) {
       showLine();
       const num = (key, label) => h('label', { class: `field ivx-n ivx-${key}` }, h('span', null, label), money(it, key, showLine));
       const move = (to) => { [d.items[to], d.items[i]] = [d.items[i], d.items[to]]; drawItems(); changed(); };
+      const descBox = ivGrow(h('textarea', { dir: 'auto', value: it.desc, maxlength: IV.limits.desc, placeholder: 'مثال: تصميم هوية بصرية كاملة، ويمكنك كتابة التفاصيل هنا بقدر ما تريد', oninput: (e) => { it.desc = e.target.value; changed(); } }));
+      // the AI's wording lands in the box as if typed there (the preview and the totals follow)
+      const aiDesc = () => ivAiWrite({ kind: 'item', lang: d.lang, current: it.desc, apply: (text, mode) => {
+        descBox.value = mode === 'append' && it.desc.trim() ? `${it.desc.trimEnd()}\n${text}` : text;
+        descBox.dispatchEvent(new Event('input', { bubbles: true }));
+      } });
       return h('div', { class: 'ivx-item' },
-        h('label', { class: 'field ivx-desc' }, h('span', null, 'الوصف'), ivGrow(h('textarea', { dir: 'auto', value: it.desc, maxlength: IV.limits.desc, placeholder: 'مثال: تصميم هوية بصرية كاملة، ويمكنك كتابة التفاصيل هنا بقدر ما تريد', oninput: (e) => { it.desc = e.target.value; changed(); } }))),
+        h('div', { class: 'ivx-desc' }, h('label', { class: 'field' }, h('span', null, 'الوصف'), descBox), ivAiButton(aiDesc)),
         num('qty', 'الكمية'), num('price', `سعر الوحدة (${d.currency})`),
         h('div', { class: 'ivx-item-end' }, line, h('span', { class: 'row' },
           h('button', { type: 'button', class: 'btn btn-icon btn-small', title: 'تقديم', 'aria-label': 'تقديم', disabled: i === 0, onclick: () => move(i - 1) }, '↑'),
@@ -661,7 +753,7 @@ function ivEditor(view, d, base, opts = {}) {
     notesCard.replaceWith(notesCard = drawNotes());
   };
   const drawNotes = () => h('div', { class: 'card grid' }, h('h2', null, d.type === 'receipt' ? 'الوصف' : 'ملاحظات وشروط'),
-    longText(d, 'notes', d.type === 'receipt' ? 'وذلك عن' : 'ملاحظات تظهر في المستند', IV.limits.notes, { placeholder: d.type === 'receipt' ? 'مثال: الدفعة الأولى من مشروع الهوية البصرية' : '' }),
+    longText(d, 'notes', d.type === 'receipt' ? 'وذلك عن' : 'ملاحظات تظهر في المستند', IV.limits.notes, { placeholder: d.type === 'receipt' ? 'مثال: الدفعة الأولى من مشروع الهوية البصرية' : '', ai: d.type === 'receipt' ? 'receipt' : null }),
     d.type === 'receipt' ? null : longText(d, 'terms', 'الشروط / طريقة الدفع', IV.limits.terms, { hint: 'بيانات البنك تُضاف تلقائياً من «بيانات الشركة». النص الطويل ينتقل إلى صفحة A4 جديدة وحده.' }));
   let notesCard = drawNotes();
 
